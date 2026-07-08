@@ -1413,13 +1413,17 @@ function normalizeDestinationName(value) {
   return String(value).toLowerCase().replace(/[\s\-_.,，。:：]/g, "");
 }
 
-function getDestinationHeroType(destination) {
+function getKnownDestinationHeroType(destination) {
   const normalizedDestination = normalizeDestinationName(destination);
   const match = destinationHeroKeywords.find(({ keywords }) =>
     keywords.some((keyword) => normalizedDestination.includes(normalizeDestinationName(keyword))),
   );
 
-  return match?.type || finalPersonaType;
+  return match?.type || null;
+}
+
+function getDestinationHeroType(destination) {
+  return getKnownDestinationHeroType(destination) || finalPersonaType;
 }
 
 function getStoryHeroForResult(result) {
@@ -1592,15 +1596,71 @@ function showResult() {
   requestPersonalizedResult();
 }
 
-function getSkyscannerUrlForAngle(angle) {
-  const urls = {
-    flights: "https://www.skyscanner.com/flights",
-    flight_deals: "https://www.skyscanner.com/flights/last-minute-deals/",
-    hotels: "https://www.skyscanner.com/hotels",
-    car_hire: "https://www.skyscanner.com/car-rental",
-  };
+const skyscannerBaseUrls = {
+  flights: "https://www.skyscanner.com/flights",
+  flight_deals: "https://www.skyscanner.com/flights/last-minute-deals/",
+  hotels: "https://www.skyscanner.com/hotels",
+  car_hire: "https://www.skyscanner.com/car-rental",
+};
 
-  return urls[angle] || finalPersona.skyscanner.url;
+function getSkyscannerAngleFromUrl(url) {
+  if (url.includes("car-rental")) {
+    return "car_hire";
+  }
+
+  if (url.includes("hotels")) {
+    return "hotels";
+  }
+
+  if (url.includes("last-minute-deals")) {
+    return "flight_deals";
+  }
+
+  return "flights";
+}
+
+function inferSkyscannerAngleFromServices(services, fallbackAngle) {
+  const serviceText = services.join(" ").toLowerCase();
+
+  if (/租车|car hire|car rental/.test(serviceText)) {
+    return "car_hire";
+  }
+
+  if (/酒店|住宿|hotel|hotels|stay|stays|apartment/.test(serviceText)) {
+    return "hotels";
+  }
+
+  if (/便宜|低价|捡漏|deal|deals|cheap|last-minute|flexible/.test(serviceText)) {
+    return "flight_deals";
+  }
+
+  if (/机票|航班|flight|flights/.test(serviceText)) {
+    return "flights";
+  }
+
+  return fallbackAngle;
+}
+
+function getSkyscannerDestination(destination) {
+  const heroType = getKnownDestinationHeroType(destination);
+  return destinationHeroImages[heroType]?.destination.en || destination;
+}
+
+function buildSkyscannerUrl(angle, destination, personaType = finalPersonaType) {
+  const resolvedAngle = angle || getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
+  const url = new URL(skyscannerBaseUrls[resolvedAngle] || finalPersona.skyscanner.url);
+  const skyscannerDestination = getSkyscannerDestination(destination).trim();
+
+  url.searchParams.set("utm_source", "travel_personality_quiz");
+  url.searchParams.set("utm_medium", "result_card");
+  url.searchParams.set("utm_campaign", "travel_personality");
+  url.searchParams.set("utm_content", `${personaType || "result"}_${resolvedAngle}`);
+
+  if (skyscannerDestination) {
+    url.searchParams.set("destination", skyscannerDestination);
+  }
+
+  return url.toString();
 }
 
 function normalizeList(value, fallback) {
@@ -1615,15 +1675,17 @@ function normalizeList(value, fallback) {
 function getResultContent() {
   const fallbackTags = finalPersona.tags[currentLang];
   const fallbackServices = finalPersona.skyscanner.services[currentLang];
+  const fallbackDestination = localize(finalPersona.destination);
+  const fallbackAngle = getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
 
   if (!aiPersonalizedResult) {
     return {
       name: getPersonaDisplayName(finalPersona),
       label: localize(finalPersona.label),
-      destination: localize(finalPersona.destination),
+      destination: fallbackDestination,
       note: localize(finalPersona.note),
       tags: fallbackTags,
-      skyscannerUrl: finalPersona.skyscanner.url,
+      skyscannerUrl: buildSkyscannerUrl(fallbackAngle, fallbackDestination),
       skyscannerTitle: localize(finalPersona.skyscanner.title),
       skyscannerCopy: localize(finalPersona.skyscanner.copy),
       skyscannerServices: fallbackServices,
@@ -1631,16 +1693,23 @@ function getResultContent() {
     };
   }
 
+  const aiDestination = aiPersonalizedResult.destination || fallbackDestination;
+  const aiServices = normalizeList(aiPersonalizedResult.skyscannerServices, fallbackServices);
+  const aiAngle = inferSkyscannerAngleFromServices(
+    aiServices,
+    aiPersonalizedResult.skyscannerAngle || fallbackAngle,
+  );
+
   return {
     name: aiPersonalizedResult.personaSubtype || getPersonaDisplayName(finalPersona),
     label: aiPersonalizedResult.vibeLine || localize(finalPersona.label),
-    destination: aiPersonalizedResult.destination || localize(finalPersona.destination),
+    destination: aiDestination,
     note: aiPersonalizedResult.resultNote || localize(finalPersona.note),
     tags: normalizeList(aiPersonalizedResult.tags, fallbackTags),
-    skyscannerUrl: getSkyscannerUrlForAngle(aiPersonalizedResult.skyscannerAngle),
+    skyscannerUrl: buildSkyscannerUrl(aiAngle, aiDestination),
     skyscannerTitle: aiPersonalizedResult.skyscannerTitle || localize(finalPersona.skyscanner.title),
     skyscannerCopy: aiPersonalizedResult.skyscannerCopy || localize(finalPersona.skyscanner.copy),
-    skyscannerServices: normalizeList(aiPersonalizedResult.skyscannerServices, fallbackServices),
+    skyscannerServices: aiServices,
     shareCaption: aiPersonalizedResult.shareCaption || "",
   };
 }
