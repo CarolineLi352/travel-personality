@@ -62,7 +62,7 @@ const uiCopy = {
     back: "上一题",
     restart: "重新开始",
     copy: "复制分享文案",
-    download: "下载结果卡",
+    download: "保存结果卡",
     storyKicker: "我的旅行人格",
     destinationLabel: "推荐目的地",
     skyscannerLabel: "Skyscanner 灵感站",
@@ -85,8 +85,12 @@ const uiCopy = {
     matchToneGood: "很能一起玩，先把预算和作息对齐就稳了。",
     matchToneCareful: "有点互补，出发前最好先谈清楚谁早起、谁找餐厅。",
     copyDone: "分享文案和匹配链接已复制。",
-    downloadFirst: "先完成测试，再下载结果卡。",
-    downloadDone: "结果卡已生成下载。",
+    downloadFirst: "先完成测试，再保存结果卡。",
+    savePreparing: "正在生成结果卡...",
+    saveSheetOpened: "结果卡已生成，可在系统面板里选择保存到照片/相册。",
+    saveCancelled: "已取消保存。需要的话可以再点一次保存结果卡。",
+    saveFailed: "结果卡生成失败，可以先截图保存当前结果卡。",
+    downloadDone: "结果卡已生成；如果没有弹出相册选项，图片会在浏览器下载里。",
     aiLoading: "AI 正在把结果改得更像你...",
     aiReady: "AI 个性化结果已生成。",
     aiFallback: "结果卡已生成，看看你的下一站是不是很对味。",
@@ -120,7 +124,7 @@ const uiCopy = {
     back: "Back",
     restart: "Restart",
     copy: "Copy share caption",
-    download: "Download card",
+    download: "Save card",
     storyKicker: "My travel type",
     destinationLabel: "Matched destination",
     skyscannerLabel: "Skyscanner trip ideas",
@@ -143,8 +147,12 @@ const uiCopy = {
     matchToneGood: "Good travel-duo energy. Align budget and pace, then go.",
     matchToneCareful: "Complementary, but agree on mornings, food stops and budget first.",
     copyDone: "Share caption and match link copied.",
-    downloadFirst: "Finish the quiz first, then download your card.",
-    downloadDone: "Result card downloaded.",
+    downloadFirst: "Finish the quiz first, then save your card.",
+    savePreparing: "Creating your result card...",
+    saveSheetOpened: "Your card is ready. Choose Save Image or Photos in the system sheet.",
+    saveCancelled: "Save cancelled. Tap Save card again when you are ready.",
+    saveFailed: "Could not create the card. You can still screenshot the result card.",
+    downloadDone: "Your card is ready. If no photo option appeared, check your browser downloads.",
     aiLoading: "AI is personalizing your result...",
     aiReady: "AI-personalized result ready.",
     aiFallback: "Your result card is ready. See if the next trip fits your vibe.",
@@ -1915,14 +1923,36 @@ async function copyShareText() {
   }
 }
 
-async function downloadResultCard() {
+function getResultCardFilename() {
+  return `travel-personality-${finalPersona.name.toLowerCase().replaceAll(" ", "-")}-${currentLang}.png`;
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+
+      reject(new Error("Unable to create result card image."));
+    }, "image/png");
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.download = filename;
+  link.href = url;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function createResultCardBlob() {
   const copy = uiCopy[currentLang];
-
-  if (!finalPersona) {
-    copyStatus.textContent = copy.downloadFirst;
-    return;
-  }
-
   const result = getResultContent();
   const canvas = document.createElement("canvas");
   const width = 1080;
@@ -2002,11 +2032,50 @@ async function downloadResultCard() {
   ctx.font = "700 28px system-ui, sans-serif";
   ctx.fillText(copy.posterBrand, 150, 1320);
 
-  const link = document.createElement("a");
-  link.download = `travel-personality-${finalPersona.name.toLowerCase().replaceAll(" ", "-")}-${currentLang}.png`;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-  copyStatus.textContent = copy.downloadDone;
+  return canvasToBlob(canvas);
+}
+
+async function downloadResultCard() {
+  const copy = uiCopy[currentLang];
+
+  if (!finalPersona) {
+    copyStatus.textContent = copy.downloadFirst;
+    return;
+  }
+
+  copyStatus.textContent = copy.savePreparing;
+
+  try {
+    const blob = await createResultCardBlob();
+    const filename = getResultCardFilename();
+
+    if (window.File && navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: "image/png" });
+      const shareData = {
+        files: [file],
+        title: copy.posterKicker,
+        text: copy.shareInvite,
+      };
+
+      if (navigator.canShare(shareData)) {
+        try {
+          await navigator.share(shareData);
+          copyStatus.textContent = copy.saveSheetOpened;
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") {
+            copyStatus.textContent = copy.saveCancelled;
+            return;
+          }
+        }
+      }
+    }
+
+    downloadBlob(blob, filename);
+    copyStatus.textContent = copy.downloadDone;
+  } catch {
+    copyStatus.textContent = copy.saveFailed;
+  }
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
