@@ -77,7 +77,14 @@ const uiCopy = {
     friendStampLockedLabel: "好友 match",
     friendStampReady: "分享",
     friendStampReadyLabel: "看匹配度",
-    copyDone: "分享文案已复制。",
+    friendStampMatchedLabel: "搭子 match",
+    matchPendingLabel: "等待好友答题",
+    matchInvite: (name) => `正在和「${name}」匹配旅行搭子指数，答完就能看你们适不适合一起出发。`,
+    matchResultLine: (score, tone, name) => `你和「${name}」的旅行搭子指数是 ${score}%。${tone}`,
+    matchToneHigh: "天选搭子，已经可以开始讨论请假日期。",
+    matchToneGood: "很能一起玩，先把预算和作息对齐就稳了。",
+    matchToneCareful: "有点互补，出发前最好先谈清楚谁早起、谁找餐厅。",
+    copyDone: "分享文案和匹配链接已复制。",
     downloadFirst: "先完成测试，再下载结果卡。",
     downloadDone: "结果卡已生成下载。",
     aiLoading: "AI 正在把结果改得更像你...",
@@ -128,7 +135,14 @@ const uiCopy = {
     friendStampLockedLabel: "Friend match",
     friendStampReady: "Share",
     friendStampReadyLabel: "match check",
-    copyDone: "Share caption copied.",
+    friendStampMatchedLabel: "duo match",
+    matchPendingLabel: "waiting for friend",
+    matchInvite: (name) => `You are matching with ${name}. Answer the quiz to see if you are the right travel duo.`,
+    matchResultLine: (score, tone, name) => `Your travel-duo match with ${name} is ${score}%. ${tone}`,
+    matchToneHigh: "Very strong match. You can probably start comparing dates.",
+    matchToneGood: "Good travel-duo energy. Align budget and pace, then go.",
+    matchToneCareful: "Complementary, but agree on mornings, food stops and budget first.",
+    copyDone: "Share caption and match link copied.",
     downloadFirst: "Finish the quiz first, then download your card.",
     downloadDone: "Result card downloaded.",
     aiLoading: "AI is personalizing your result...",
@@ -148,6 +162,19 @@ const uiCopy = {
 
 const totalQuizSteps = 8;
 const startQuestionId = "tripSpark";
+const personaOrder = ["weekend", "food", "budget", "luxury", "culture", "nature"];
+const personaCompatibility = {
+  "budget-weekend": 0.78,
+  "food-weekend": 0.76,
+  "nature-weekend": 0.78,
+  "culture-food": 0.8,
+  "food-luxury": 0.72,
+  "budget-food": 0.68,
+  "budget-culture": 0.7,
+  "culture-luxury": 0.76,
+  "luxury-nature": 0.68,
+  "culture-nature": 0.64,
+};
 
 const questionBank = {
   tripSpark: {
@@ -1199,6 +1226,8 @@ let finalPersonaType = null;
 let aiPersonalizedResult = null;
 let aiRequestId = 0;
 let currentLang = "zh";
+let sharedMatchProfile = null;
+let latestFriendMatch = null;
 
 function localize(value) {
   if (typeof value === "string") {
@@ -1230,6 +1259,154 @@ function localizedValue(value, lang = currentLang) {
   }
 
   return value[lang];
+}
+
+function encodeMatchPayload(profile) {
+  const bytes = new TextEncoder().encode(JSON.stringify(profile));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeMatchPayload(payload) {
+  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function sanitizeSharedMatchProfile(profile) {
+  if (!profile || profile.v !== 1 || !personaOrder.includes(profile.type)) {
+    return null;
+  }
+
+  const scores = Array.isArray(profile.scores)
+    ? profile.scores.slice(0, personaOrder.length).map((score) => Math.max(0, Number(score) || 0))
+    : personaOrder.map((type) => Math.max(0, Number(profile.scores?.[type]) || 0));
+
+  if (scores.length !== personaOrder.length || scores.every((score) => score === 0)) {
+    return null;
+  }
+
+  return {
+    v: 1,
+    type: profile.type,
+    name: String(profile.name || personas[profile.type].name).slice(0, 34),
+    scores,
+    answerTypes: Array.isArray(profile.answerTypes)
+      ? profile.answerTypes.filter((type) => personaOrder.includes(type)).slice(0, totalQuizSteps)
+      : [],
+    destination: String(profile.destination || "").slice(0, 30),
+  };
+}
+
+function readSharedMatchProfile() {
+  const payload = new URLSearchParams(window.location.search).get("match");
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    return sanitizeSharedMatchProfile(decodeMatchPayload(payload));
+  } catch {
+    return null;
+  }
+}
+
+function getScoreArray(scoreSummary) {
+  return personaOrder.map((type) => Math.max(0, Number(scoreSummary[type]) || 0));
+}
+
+function normalizeScoreArray(scores) {
+  const maxScore = Math.max(...scores, 1);
+  return scores.map((score) => Math.max(0, Number(score) || 0) / maxScore);
+}
+
+function getCompatibilityKey(typeA, typeB) {
+  return [typeA, typeB].sort().join("-");
+}
+
+function getPersonaCompatibility(typeA, typeB) {
+  if (typeA === typeB) {
+    return 1;
+  }
+
+  return personaCompatibility[getCompatibilityKey(typeA, typeB)] || 0.54;
+}
+
+function getAnswerTypeSimilarity(friendTypes) {
+  if (!Array.isArray(friendTypes) || !friendTypes.length) {
+    return 0.58;
+  }
+
+  const currentTypes = answers.map((answer) => answer.type);
+  const length = Math.min(currentTypes.length, friendTypes.length);
+  if (!length) {
+    return 0.58;
+  }
+
+  const directMatches = currentTypes
+    .slice(0, length)
+    .filter((type, index) => type === friendTypes[index]).length;
+  return directMatches / length;
+}
+
+function getMatchTone(score) {
+  const copy = uiCopy[currentLang];
+  if (score >= 86) {
+    return copy.matchToneHigh;
+  }
+
+  if (score >= 72) {
+    return copy.matchToneGood;
+  }
+
+  return copy.matchToneCareful;
+}
+
+function calculateFriendMatch() {
+  if (!sharedMatchProfile || !finalPersonaType) {
+    return null;
+  }
+
+  const currentScores = normalizeScoreArray(getScoreArray(getScoreSummary()));
+  const friendScores = normalizeScoreArray(sharedMatchProfile.scores);
+  const distance =
+    currentScores.reduce((total, score, index) => total + Math.abs(score - friendScores[index]), 0) /
+    personaOrder.length;
+  const scoreSimilarity = Math.max(0, 1 - distance);
+  const personaSimilarity = getPersonaCompatibility(sharedMatchProfile.type, finalPersonaType);
+  const answerSimilarity = getAnswerTypeSimilarity(sharedMatchProfile.answerTypes);
+  const combined = scoreSimilarity * 0.52 + personaSimilarity * 0.32 + answerSimilarity * 0.16;
+  const score = Math.min(98, Math.max(54, Math.round(52 + combined * 46)));
+
+  return {
+    score,
+    friendName: sharedMatchProfile.name,
+    tone: getMatchTone(score),
+  };
+}
+
+function buildShareProfile() {
+  return {
+    v: 1,
+    type: finalPersonaType,
+    name: getPersonaDisplayName(finalPersona),
+    scores: getScoreArray(getScoreSummary()),
+    answerTypes: answers.map((answer) => answer.type),
+    destination: localize(finalPersona.destination),
+  };
+}
+
+function getMatchShareUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("match", encodeMatchPayload(buildShareProfile()));
+  url.hash = "";
+  return url.toString();
 }
 
 function normalizeDestinationName(value) {
@@ -1303,6 +1480,9 @@ function renderQuestion() {
   const copy = uiCopy[currentLang];
   const question = questionBank[currentQuestionId];
   const currentStep = Math.min(answers.length + 1, totalQuizSteps);
+  const matchInvite = sharedMatchProfile
+    ? `<p class="match-invite">${escapeHtml(copy.matchInvite(sharedMatchProfile.name))}</p>`
+    : "";
   stepLabel.textContent = copy.step(currentStep, totalQuizSteps);
   progressFill.style.width = `${(answers.length / totalQuizSteps) * 100}%`;
   backButton.disabled = answers.length === 0;
@@ -1312,6 +1492,7 @@ function renderQuestion() {
   questionPanel.innerHTML = `
     <span class="question-label">${localize(question.label)}</span>
     <h2 class="question-title">${localize(question.title)}</h2>
+    ${matchInvite}
     <div class="option-grid">
       ${question.options
         .map(
@@ -1406,6 +1587,7 @@ function showResult() {
   finalPersonaType = type;
   finalPersona = personas[type];
   aiPersonalizedResult = null;
+  latestFriendMatch = calculateFriendMatch();
   renderResult();
   requestPersonalizedResult();
 }
@@ -1466,13 +1648,17 @@ function getResultContent() {
 function renderResult() {
   const copy = uiCopy[currentLang];
   const result = getResultContent();
+  latestFriendMatch = calculateFriendMatch();
+  const resultLede = latestFriendMatch
+    ? copy.matchResultLine(latestFriendMatch.score, latestFriendMatch.tone, latestFriendMatch.friendName)
+    : aiPersonalizedResult?.shareCaption || localize(finalPersona.vibe);
 
   progressFill.style.width = "100%";
   stepLabel.textContent = copy.complete;
   questionPanel.innerHTML = `
     <span class="question-label">${copy.resultReady}</span>
     <h2 class="question-title">${escapeHtml(copy.resultTitle(result.name))}</h2>
-    <p class="lede">${escapeHtml(aiPersonalizedResult?.shareCaption || localize(finalPersona.vibe))}</p>
+    <p class="lede">${escapeHtml(resultLede)}</p>
     <div class="quiz-actions">
       <button class="primary-button" type="button" id="jumpResultButton">${copy.jumpResult}</button>
       <button class="ghost-button" type="button" id="playAgainInline">${copy.playAgain}</button>
@@ -1489,8 +1675,8 @@ function renderResult() {
   resultEls.placeholder.hidden = true;
   resultEls.destination.textContent = result.destination;
   resultEls.note.textContent = result.note;
-  resultEls.score.textContent = copy.friendStampReady;
-  resultEls.scoreLabel.textContent = copy.friendStampReadyLabel;
+  resultEls.score.textContent = latestFriendMatch ? `${latestFriendMatch.score}%` : copy.friendStampReady;
+  resultEls.scoreLabel.textContent = latestFriendMatch ? copy.friendStampMatchedLabel : copy.friendStampReadyLabel;
   resultEls.tags.innerHTML = result.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
   resultEls.skyscannerLink.href = result.skyscannerUrl;
   resultEls.skyscannerTitle.textContent = result.skyscannerTitle;
@@ -1518,7 +1704,7 @@ function renderDefaultResult() {
   resultEls.destination.textContent = copy.defaultDestination;
   resultEls.note.textContent = copy.defaultNote;
   resultEls.score.textContent = copy.friendStampLocked;
-  resultEls.scoreLabel.textContent = copy.friendStampLockedLabel;
+  resultEls.scoreLabel.textContent = sharedMatchProfile ? copy.matchPendingLabel : copy.friendStampLockedLabel;
   resultEls.tags.innerHTML = copy.defaultTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
   resultEls.skyscannerLink.href = "https://www.skyscanner.com/";
   resultEls.skyscannerTitle.textContent = copy.defaultSkyscannerTitle;
@@ -1533,6 +1719,7 @@ function restartQuiz() {
   finalPersona = null;
   finalPersonaType = null;
   aiPersonalizedResult = null;
+  latestFriendMatch = null;
   aiRequestId += 1;
   copyStatus.textContent = "";
   renderDefaultResult();
@@ -1644,7 +1831,8 @@ function getShareText() {
 
   const result = getResultContent();
   const caption = result.shareCaption ? `${result.shareCaption}\n` : "";
-  return `${caption}${copy.shareTitle} "${result.name} — ${result.label}"\n${copy.shareDestination}: ${result.destination}\n${result.note}\n${copy.shareInvite}\n${result.skyscannerTitle}: ${result.skyscannerUrl}\n${copy.shareTags}`;
+  const shareUrl = getMatchShareUrl();
+  return `${caption}${copy.shareTitle} "${result.name} — ${result.label}"\n${copy.shareDestination}: ${result.destination}\n${result.note}\n${copy.shareInvite}\n${shareUrl}\n${result.skyscannerTitle}: ${result.skyscannerUrl}\n${copy.shareTags}`;
 }
 
 async function copyShareText() {
@@ -1801,6 +1989,7 @@ backButton.addEventListener("click", () => {
     finalPersona = null;
     finalPersonaType = null;
     aiPersonalizedResult = null;
+    latestFriendMatch = null;
     aiRequestId += 1;
     resultActions.hidden = true;
     renderQuestion();
@@ -1828,6 +2017,7 @@ languageButtons.forEach((button) => {
   });
 });
 
+sharedMatchProfile = readSharedMatchProfile();
 renderStaticCopy();
 renderDefaultResult();
 renderQuestion();

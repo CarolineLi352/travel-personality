@@ -319,6 +319,18 @@ h1 {
   font-size: 2rem;
 }
 
+.match-invite {
+  margin: 14px 0 0;
+  border: 1px solid rgba(0, 166, 152, 0.28);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #e6fbf8;
+  color: #005f59;
+  font-size: 0.94rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
 .option-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
