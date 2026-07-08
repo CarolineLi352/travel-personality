@@ -64,6 +64,18 @@ python3 -m http.server 5173
 
 纯静态模式不会调用 AI，会使用内置的默认结果卡。
 
+### GitHub Pages 上线
+
+GitHub Pages 如果只能选择 `/docs`，使用当前仓库的 `docs/` 目录作为发布源即可：
+
+1. 在 GitHub repo 进入 `Settings` -> `Pages`
+2. Source 选择 `Deploy from a branch`
+3. Branch 选择 `main`
+4. Folder 选择 `/docs`
+5. 保存后等待部署完成
+
+线上静态版会跳过 Lite AI 请求，使用规则判定的人格和内置目的地结果卡。
+
 ### Lite AI 模式
 
 1. 复制 `.env.example` 为 `.env`，填入你的 OpenAI API Key：

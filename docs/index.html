@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Travel Personality | 旅行人格测试</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#app" aria-label="Travel Personality 首页">
+        <span class="brand-mark" aria-hidden="true">TP</span>
+        <span id="brandText">旅行人格测试</span>
+      </a>
+      <div class="topbar-actions">
+        <span class="topbar-note" id="topbarNote">测出你的下一站</span>
+        <div class="language-switch" aria-label="Language">
+          <button type="button" data-lang="zh" aria-pressed="true">中</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-shell" id="app">
+      <section class="quiz-stage" aria-labelledby="appTitle">
+        <div class="intro-block">
+          <p class="eyebrow" id="heroEyebrow">Travel Personality</p>
+          <h1 id="appTitle">先测出旅行人格
+再找到下一站</h1>
+          <p class="lede" id="appLede">
+            测测你的旅行人格，看看你适合飞去哪里。
+          </p>
+          <div class="service-strip" aria-label="Travel search categories">
+            <span id="serviceFlights">机票</span>
+            <span id="serviceHotels">酒店</span>
+            <span id="serviceCars">租车</span>
+          </div>
+        </div>
+
+        <section class="quiz-card" id="quizCard" aria-live="polite">
+          <div class="progress-row">
+            <span id="stepLabel">第 1 / 8 题</span>
+            <div class="progress-track" aria-hidden="true">
+              <span id="progressFill"></span>
+            </div>
+          </div>
+
+          <div id="questionPanel"></div>
+
+          <div class="quiz-actions">
+            <button class="ghost-button" type="button" id="backButton">上一题</button>
+            <button class="primary-button" type="button" id="restartButton">重新开始</button>
+          </div>
+        </section>
+      </section>
+
+      <aside class="phone-preview" aria-label="结果预览">
+        <div class="phone-frame">
+          <div class="story-card" id="shareCard">
+            <div class="story-image">
+              <img
+                id="storyHeroImage"
+                src="assets/travel-personality-hero.png"
+                alt="旅行人格测试的目的地卡片和地图视觉"
+              />
+            </div>
+            <div class="story-content">
+              <figure class="persona-portrait is-locked" id="personaPortrait">
+                <img id="personaImage" src="assets/personas/flashpack.png" alt="" hidden />
+                <span id="personaPlaceholder" aria-hidden="true">?</span>
+              </figure>
+              <p class="story-kicker" id="storyKicker">我的旅行人格</p>
+              <h2 id="resultName">还没揭晓</h2>
+              <p class="result-vibe" id="resultVibe">答题后生成你的专属结果卡。</p>
+              <div class="destination-block">
+                <span id="destinationLabel">推荐目的地</span>
+                <strong id="destinationName">先卖个关子</strong>
+              </div>
+              <div class="tag-row" id="tagRow">
+                <span>周末</span>
+                <span>美食</span>
+                <span>预算</span>
+              </div>
+              <p class="result-note" id="resultNote">
+                你的下一站还在洗牌：可能是为一口好吃的飞走，也可能是租辆车去看海。
+              </p>
+              <a
+                class="skyscanner-card"
+                id="skyscannerLink"
+                href="https://www.skyscanner.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span class="skyscanner-label" id="skyscannerLabel">Skyscanner 灵感站</span>
+                <strong id="skyscannerTitle">先答题，再决定怎么飞</strong>
+                <small id="skyscannerCopy">等人格出炉，再去找一条更对味的路线：飞过去、住舒服，或一路开到风景里。</small>
+                <span class="skyscanner-services" id="skyscannerServices">
+                  <span>机票</span>
+                  <span>酒店</span>
+                  <span>租车</span>
+                </span>
+              </a>
+              <div class="score-stamp">
+                <span id="scoreValue">--</span>
+                <small id="scoreLabel">friend match</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-actions" id="resultActions" hidden>
+            <button class="primary-button" type="button" id="copyButton">复制分享文案</button>
+            <button class="ghost-button" type="button" id="downloadButton">下载结果卡</button>
+          </div>
+          <p class="copy-status" id="copyStatus" role="status" aria-live="polite"></p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
