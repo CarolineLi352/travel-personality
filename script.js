@@ -1781,6 +1781,8 @@ function renderResult() {
 function renderDefaultResult() {
   const copy = uiCopy[currentLang];
   setStoryHero(defaultStoryHero);
+  resultActions.hidden = true;
+  resultEls.image.removeAttribute("src");
   resultEls.image.src = defaultPersonaImage.src;
   resultEls.image.alt = localize(defaultPersonaImage.alt);
   resultEls.image.hidden = false;
@@ -1809,8 +1811,8 @@ function restartQuiz() {
   latestFriendMatch = null;
   aiRequestId += 1;
   copyStatus.textContent = "";
-  renderDefaultResult();
   renderQuestion();
+  renderDefaultResult();
 }
 
 function buildAiPayload() {
@@ -2141,6 +2143,7 @@ backButton.addEventListener("click", () => {
     aiRequestId += 1;
     resultActions.hidden = true;
     renderQuestion();
+    renderDefaultResult();
   }
 });
 
