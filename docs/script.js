@@ -1179,6 +1179,14 @@ const defaultStoryHero = {
   },
 };
 
+const defaultPersonaImage = {
+  src: "assets/personas/default-traveler.png",
+  alt: {
+    zh: "默认旅行人格贴纸",
+    en: "Default travel personality sticker",
+  },
+};
+
 const destinationHeroImages = {
   weekend: {
     src: "assets/destinations/fukuoka.jpg",
@@ -1773,9 +1781,11 @@ function renderResult() {
 function renderDefaultResult() {
   const copy = uiCopy[currentLang];
   setStoryHero(defaultStoryHero);
-  resultEls.image.hidden = true;
+  resultEls.image.src = defaultPersonaImage.src;
+  resultEls.image.alt = localize(defaultPersonaImage.alt);
+  resultEls.image.hidden = false;
   resultEls.portrait.classList.add("is-locked");
-  resultEls.placeholder.hidden = false;
+  resultEls.placeholder.hidden = true;
   resultEls.name.textContent = copy.defaultName;
   resultEls.vibe.textContent = copy.defaultVibe;
   resultEls.destination.textContent = copy.defaultDestination;
