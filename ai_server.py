@@ -88,7 +88,47 @@ RESULT_SCHEMA = {
     },
 }
 
-SYSTEM_PROMPT = """
+QUESTION_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["label", "title", "options"],
+    "properties": {
+        "label": {
+            "type": "string",
+            "description": "A short label for the current question.",
+        },
+        "title": {
+            "type": "string",
+            "description": "The personalized current question title.",
+        },
+        "options": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["letter", "title", "copy"],
+                "properties": {
+                    "letter": {
+                        "type": "string",
+                        "enum": ["A", "B", "C", "D"],
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Personalized option title. Must keep the original option meaning.",
+                    },
+                    "copy": {
+                        "type": "string",
+                        "description": "Short supporting option copy. Must keep the original option meaning.",
+                    },
+                },
+            },
+        },
+    },
+}
+
+RESULT_SYSTEM_PROMPT = """
 You are the AI copywriter for a playful Travel Personality quiz.
 Generate a Lite personalized result from the user's quiz answers.
 
@@ -105,6 +145,24 @@ Rules:
 - Avoid emojis, hashtags inside fields, markdown, and quotation marks around the whole answer.
 - Recommend one realistic destination that fits the persona and answer pattern.
 - To keep the result-card photo aligned, prefer a destination from destinationPhotoLibrary when it is a reasonable fit; otherwise use the base persona destination.
+""".strip()
+
+QUESTION_SYSTEM_PROMPT = """
+You are the adaptive question copywriter for a playful Travel Personality quiz.
+Rewrite the current question and its four answer options based on the user's previous answers.
+
+Rules:
+- Match the requested language exactly: zh means Simplified Chinese, en means English.
+- Keep the same four options, same letters, same order, and same underlying meaning.
+- Do not invent new scoring, new destinations, new branches, new services, or live travel facts.
+- Make the wording feel like it is reacting to the user's previous choices.
+- Keep it concise enough for a mobile quiz card.
+- Chinese copy should feel young, clear and Xiaohongshu-friendly, with light meme energy.
+- English copy should feel playful, crisp and social-shareable.
+- Use a light Skyscanner-adjacent travel-search vibe: compare options, smarter trips, flights, hotels, car hire.
+- Avoid salesy words like unlock, gateway, exclusive, must-book, or their Chinese equivalents such as 解锁 and 入口.
+- Do not claim affiliation, discounts, live prices, availability, or booking guarantees.
+- Avoid emojis, hashtags, markdown, and quotation marks around the whole answer.
 """.strip()
 
 
@@ -140,7 +198,7 @@ def read_json_body(handler: SimpleHTTPRequestHandler) -> dict:
     return json.loads(raw_body.decode("utf-8"))
 
 
-def build_openai_request(payload: dict) -> dict:
+def build_result_openai_request(payload: dict) -> dict:
     persona = payload.get("persona", {})
     answers = payload.get("answers", [])
     scores = payload.get("scores", {})
@@ -163,7 +221,7 @@ def build_openai_request(payload: dict) -> dict:
     return {
         "model": os.environ.get("OPENAI_MODEL", DEFAULT_MODEL),
         "input": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": RESULT_SYSTEM_PROMPT},
             {
                 "role": "user",
                 "content": json.dumps(user_payload, ensure_ascii=False),
@@ -182,6 +240,46 @@ def build_openai_request(payload: dict) -> dict:
     }
 
 
+def build_question_openai_request(payload: dict) -> dict:
+    language = payload.get("language", "zh")
+    user_payload = {
+        "language": language,
+        "step": payload.get("step"),
+        "totalSteps": payload.get("totalSteps"),
+        "currentQuestion": payload.get("question", {}),
+        "scoreSummary": payload.get("scores", {}),
+        "previousAnswers": payload.get("answers", []),
+        "sharedMatchMode": bool(payload.get("sharedMatchMode")),
+        "constraints": {
+            "maxLabelChars": 8 if language == "zh" else 18,
+            "maxTitleChars": 28 if language == "zh" else 78,
+            "maxOptionTitleChars": 18 if language == "zh" else 46,
+            "maxOptionCopyChars": 26 if language == "zh" else 72,
+        },
+    }
+
+    return {
+        "model": os.environ.get("OPENAI_MODEL", DEFAULT_MODEL),
+        "input": [
+            {"role": "system", "content": QUESTION_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": json.dumps(user_payload, ensure_ascii=False),
+            },
+        ],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "travel_personality_lite_question",
+                "strict": True,
+                "schema": QUESTION_SCHEMA,
+            }
+        },
+        "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.8")),
+        "max_output_tokens": int(os.environ.get("OPENAI_QUESTION_MAX_OUTPUT_TOKENS", "650")),
+    }
+
+
 def extract_response_text(data: dict) -> str:
     if isinstance(data.get("output_text"), str):
         return data["output_text"]
@@ -195,7 +293,7 @@ def extract_response_text(data: dict) -> str:
     raise ValueError("OpenAI response did not include text output.")
 
 
-def call_openai(payload: dict) -> dict:
+def call_openai(payload: dict, request_builder=build_result_openai_request) -> dict:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         return {
@@ -204,7 +302,7 @@ def call_openai(payload: dict) -> dict:
             "message": "Set OPENAI_API_KEY in your environment or a local .env file.",
         }
 
-    request_body = json.dumps(build_openai_request(payload), ensure_ascii=False).encode("utf-8")
+    request_body = json.dumps(request_builder(payload), ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(
         OPENAI_RESPONSES_URL,
         data=request_body,
@@ -250,7 +348,7 @@ class TravelPersonalityHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def do_OPTIONS(self) -> None:
-        if self.path == "/api/generate-result":
+        if self.path in {"/api/generate-result", "/api/personalize-question"}:
             self.send_response(HTTPStatus.NO_CONTENT)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -260,7 +358,7 @@ class TravelPersonalityHandler(SimpleHTTPRequestHandler):
         json_response(self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
 
     def do_POST(self) -> None:
-        if self.path != "/api/generate-result":
+        if self.path not in {"/api/generate-result", "/api/personalize-question"}:
             json_response(self, HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
             return
 
@@ -270,7 +368,12 @@ class TravelPersonalityHandler(SimpleHTTPRequestHandler):
             json_response(self, HTTPStatus.BAD_REQUEST, {"ok": False, "error": "bad_request", "message": str(exc)})
             return
 
-        result = call_openai(payload)
+        request_builder = (
+            build_question_openai_request
+            if self.path == "/api/personalize-question"
+            else build_result_openai_request
+        )
+        result = call_openai(payload, request_builder)
         status = HTTPStatus.OK if result.get("ok") else HTTPStatus.SERVICE_UNAVAILABLE
         json_response(self, status, result)
 

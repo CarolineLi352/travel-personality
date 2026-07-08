@@ -1236,11 +1236,14 @@ const destinationHeroKeywords = [
 ];
 
 const answers = [];
+const personalizedQuestions = new Map();
+const aiQuestionPendingKeys = new Set();
 let currentQuestionId = startQuestionId;
 let finalPersona = null;
 let finalPersonaType = null;
 let aiPersonalizedResult = null;
 let aiRequestId = 0;
+let aiQuestionRequestId = 0;
 let currentLang = "zh";
 let sharedMatchProfile = null;
 let latestFriendMatch = null;
@@ -1275,6 +1278,60 @@ function localizedValue(value, lang = currentLang) {
   }
 
   return value[lang];
+}
+
+function trimAiText(value, fallback, maxLength) {
+  const text = typeof value === "string" ? value.trim() : "";
+  return (text || fallback).slice(0, maxLength);
+}
+
+function getQuestionPersonalizationKey(questionId = currentQuestionId) {
+  const history = answers.map((answer) => `${answer.questionId}:${answer.optionLetter}`).join("|");
+  return `${currentLang}:${questionId}:${history}`;
+}
+
+function normalizeAiQuestionResult(result, baseQuestion) {
+  if (!isValidAiQuestionResult(result, baseQuestion)) {
+    return null;
+  }
+
+  return {
+    label: trimAiText(result.label, localize(baseQuestion.label), currentLang === "zh" ? 8 : 18),
+    title: trimAiText(result.title, localize(baseQuestion.title), currentLang === "zh" ? 34 : 86),
+    options: baseQuestion.options.map((option, index) => {
+      const aiOption = result.options[index];
+      return {
+        ...option,
+        title: trimAiText(aiOption.title, localize(option.title), currentLang === "zh" ? 22 : 54),
+        copy: trimAiText(aiOption.copy, localize(option.copy), currentLang === "zh" ? 34 : 86),
+      };
+    }),
+  };
+}
+
+function getDisplayQuestion(questionId = currentQuestionId) {
+  const baseQuestion = questionBank[questionId];
+  const personalized = personalizedQuestions.get(getQuestionPersonalizationKey(questionId));
+
+  if (!personalized) {
+    return baseQuestion;
+  }
+
+  return {
+    ...baseQuestion,
+    label: personalized.label,
+    title: personalized.title,
+    options: personalized.options,
+  };
+}
+
+function invalidateQuestionPersonalization(clearCache = false) {
+  aiQuestionRequestId += 1;
+  aiQuestionPendingKeys.clear();
+
+  if (clearCache) {
+    personalizedQuestions.clear();
+  }
 }
 
 function encodeMatchPayload(profile) {
@@ -1498,7 +1555,7 @@ function renderStaticCopy() {
 
 function renderQuestion() {
   const copy = uiCopy[currentLang];
-  const question = questionBank[currentQuestionId];
+  const question = getDisplayQuestion(currentQuestionId);
   const currentStep = Math.min(answers.length + 1, totalQuizSteps);
   const matchInvite = sharedMatchProfile
     ? `<p class="match-invite">${escapeHtml(copy.matchInvite(sharedMatchProfile.name))}</p>`
@@ -1531,22 +1588,28 @@ function renderQuestion() {
   `;
 
   questionPanel.querySelectorAll(".option-button").forEach((button) => {
-    button.addEventListener("click", () => chooseAnswer(question.options[Number(button.dataset.optionIndex)]));
+    button.addEventListener("click", () => chooseAnswer(Number(button.dataset.optionIndex)));
   });
+
+  requestPersonalizedQuestion(currentQuestionId);
 }
 
-function chooseAnswer(option) {
-  const question = questionBank[currentQuestionId];
+function chooseAnswer(optionIndex) {
+  const baseQuestion = questionBank[currentQuestionId];
+  const displayQuestion = getDisplayQuestion(currentQuestionId);
+  const option = baseQuestion.options[optionIndex];
+  const displayOption = displayQuestion.options[optionIndex] || option;
   answers.push({
     questionId: currentQuestionId,
-    questionLabel: question.label,
-    questionTitle: question.title,
+    questionLabel: displayQuestion.label,
+    questionTitle: displayQuestion.title,
     optionLetter: option.letter,
-    optionTitle: option.title,
-    optionCopy: option.copy,
+    optionTitle: displayOption.title,
+    optionCopy: displayOption.copy,
     type: getPrimaryType(option),
     score: getOptionScore(option),
   });
+  invalidateQuestionPersonalization();
 
   if (answers.length >= totalQuizSteps || !option.next) {
     showResult();
@@ -1810,6 +1873,7 @@ function restartQuiz() {
   aiPersonalizedResult = null;
   latestFriendMatch = null;
   aiRequestId += 1;
+  invalidateQuestionPersonalization(true);
   copyStatus.textContent = "";
   renderQuestion();
   renderDefaultResult();
@@ -1846,6 +1910,57 @@ function buildAiPayload() {
   };
 }
 
+function buildAiQuestionPayload(questionId) {
+  const question = questionBank[questionId];
+  return {
+    language: currentLang,
+    step: Math.min(answers.length + 1, totalQuizSteps),
+    totalSteps: totalQuizSteps,
+    sharedMatchMode: Boolean(sharedMatchProfile),
+    scores: getScoreSummary(),
+    question: {
+      id: questionId,
+      label: localize(question.label),
+      title: localize(question.title),
+      options: question.options.map((option) => ({
+        letter: option.letter,
+        title: localize(option.title),
+        copy: localize(option.copy),
+        primaryType: getPrimaryType(option),
+      })),
+    },
+    answers: answers.map((answer, index) => ({
+      step: index + 1,
+      questionId: answer.questionId,
+      questionLabel: localizedValue(answer.questionLabel),
+      question: localizedValue(answer.questionTitle),
+      selectedLetter: answer.optionLetter,
+      selected: localizedValue(answer.optionTitle),
+      selectedDetail: localizedValue(answer.optionCopy),
+      primaryType: answer.type,
+    })),
+  };
+}
+
+function isValidAiQuestionResult(result, baseQuestion) {
+  return (
+    result &&
+    typeof result.label === "string" &&
+    typeof result.title === "string" &&
+    Array.isArray(result.options) &&
+    result.options.length === baseQuestion.options.length &&
+    result.options.every(
+      (option, index) =>
+        option &&
+        option.letter === baseQuestion.options[index].letter &&
+        typeof option.title === "string" &&
+        typeof option.copy === "string" &&
+        option.title.trim() &&
+        option.copy.trim(),
+    )
+  );
+}
+
 function isValidAiResult(result) {
   const requiredStrings = [
     "personaSubtype",
@@ -1868,8 +1983,66 @@ function isValidAiResult(result) {
   );
 }
 
-function shouldRequestPersonalizedResult() {
+function shouldRequestAiPersonalization() {
   return !window.location.hostname.endsWith("github.io");
+}
+
+function shouldRequestPersonalizedResult() {
+  return shouldRequestAiPersonalization();
+}
+
+async function requestPersonalizedQuestion(questionId = currentQuestionId) {
+  if (!shouldRequestAiPersonalization() || finalPersona || answers.length === 0) {
+    return;
+  }
+
+  const baseQuestion = questionBank[questionId];
+  if (!baseQuestion) {
+    return;
+  }
+
+  const questionKey = getQuestionPersonalizationKey(questionId);
+  if (personalizedQuestions.has(questionKey) || aiQuestionPendingKeys.has(questionKey)) {
+    return;
+  }
+
+  const requestId = aiQuestionRequestId + 1;
+  aiQuestionRequestId = requestId;
+  aiQuestionPendingKeys.add(questionKey);
+
+  try {
+    const response = await fetch("/api/personalize-question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildAiQuestionPayload(questionId)),
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI endpoint returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    const personalized = normalizeAiQuestionResult(data.result, baseQuestion);
+    if (!data.ok || !personalized) {
+      throw new Error(data.error || "Invalid AI question");
+    }
+
+    if (
+      requestId !== aiQuestionRequestId ||
+      finalPersona ||
+      currentQuestionId !== questionId ||
+      questionKey !== getQuestionPersonalizationKey(questionId)
+    ) {
+      return;
+    }
+
+    personalizedQuestions.set(questionKey, personalized);
+    renderQuestion();
+  } catch {
+    // AI question personalization is optional; keep the deterministic local question.
+  } finally {
+    aiQuestionPendingKeys.delete(questionKey);
+  }
 }
 
 async function requestPersonalizedResult() {
@@ -2141,6 +2314,7 @@ backButton.addEventListener("click", () => {
     aiPersonalizedResult = null;
     latestFriendMatch = null;
     aiRequestId += 1;
+    invalidateQuestionPersonalization(true);
     resultActions.hidden = true;
     renderQuestion();
     renderDefaultResult();
@@ -2155,6 +2329,7 @@ languageButtons.forEach((button) => {
   button.addEventListener("click", () => {
     currentLang = button.dataset.lang;
     copyStatus.textContent = "";
+    invalidateQuestionPersonalization(true);
     renderStaticCopy();
 
     if (finalPersona) {
