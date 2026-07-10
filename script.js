@@ -79,8 +79,8 @@ const uiCopy = {
     friendStampReadyLabel: "看匹配度",
     friendStampMatchedLabel: "搭子 match",
     matchPendingLabel: "等待好友答题",
-    matchInvite: (name) => `正在和「${name}」匹配旅行搭子指数，答完就能看你们适不适合一起出发。`,
-    matchResultLine: (score, tone, name) => `你和「${name}」的旅行搭子指数是 ${score}%。${tone}`,
+    matchInvite: "好友邀请你测测旅行人格，答完就能看你们适不适合一起出发。",
+    matchResultLine: (score, tone) => `你们的旅行搭子指数是 ${score}%。${tone}`,
     matchToneHigh: "天选搭子，已经可以开始讨论请假日期。",
     matchToneGood: "很能一起玩，先把预算和作息对齐就稳了。",
     matchToneCareful: "有点互补，出发前最好先谈清楚谁早起、谁找餐厅。",
@@ -94,15 +94,13 @@ const uiCopy = {
     aiLoading: "AI 正在把结果改得更像你...",
     aiReady: "AI 个性化结果已生成。",
     aiFallback: "结果卡已生成，看看你的下一站是不是很对味。",
-    shareFallback: "我正在测自己的旅行人格，看看下一站会被推荐去哪里。",
-    shareTitle: "我的旅行人格是",
-    shareDestination: "推荐目的地",
-    shareInvite: "发给朋友一起测，看看我们是不是最合适的旅游搭子：",
-    shareTags: "#旅行人格测试 #下一站去哪 #TravelSmarter",
+    shareFallback: "我刚在测旅行人格，想看看会抽到哪座城市。",
+    shareInvite: "你也测测看你的旅行人格？顺便看看我们适不适合当旅行搭子：",
     posterKicker: "我的旅行人格",
-    posterDestination: "推荐目的地",
-    posterServices: "机票 / 酒店 / 租车",
-    posterBrand: "Travel smarter with Skyscanner",
+    posterDestination: "这次抽到",
+    posterServices: "旅行人格测试",
+    posterReaction: "这次的结果，有点像我。",
+    posterBrand: "没有标准答案，开心就好。",
   },
   en: {
     pageTitle: "Travel Personality | Find Your Travel Type",
@@ -141,8 +139,8 @@ const uiCopy = {
     friendStampReadyLabel: "match check",
     friendStampMatchedLabel: "duo match",
     matchPendingLabel: "waiting for friend",
-    matchInvite: (name) => `You are matching with ${name}. Answer the quiz to see if you are the right travel duo.`,
-    matchResultLine: (score, tone, name) => `Your travel-duo match with ${name} is ${score}%. ${tone}`,
+    matchInvite: "A friend invited you to find your travel type. Finish the quiz to see how well you would travel together.",
+    matchResultLine: (score, tone) => `Your travel-duo match is ${score}%. ${tone}`,
     matchToneHigh: "Very strong match. You can probably start comparing dates.",
     matchToneGood: "Good travel-duo energy. Align budget and pace, then go.",
     matchToneCareful: "Complementary, but agree on mornings, food stops and budget first.",
@@ -156,20 +154,19 @@ const uiCopy = {
     aiLoading: "AI is personalizing your result...",
     aiReady: "AI-personalized result ready.",
     aiFallback: "Your result card is ready. See if the next trip fits your vibe.",
-    shareFallback: "I am finding my travel type and my next matched destination.",
-    shareTitle: "My travel type is",
-    shareDestination: "Matched destination",
-    shareInvite: "Send this to a friend and see if you are the perfect travel duo:",
-    shareTags: "#TravelPersonality #WhereToNext #TravelSmarter",
+    shareFallback: "I just took a travel personality quiz to see which city I would draw.",
+    shareInvite: "Want to find your travel personality too? Let's see whether we'd make good travel buddies:",
     posterKicker: "My travel type",
-    posterDestination: "Matched destination",
-    posterServices: "Flights / Hotels / Car hire",
-    posterBrand: "Travel smarter with Skyscanner",
+    posterDestination: "This time I got",
+    posterServices: "TRAVEL QUIZ",
+    posterReaction: "Honestly, this feels like me.",
+    posterBrand: "No right answer — just for fun.",
   },
 };
 
-const totalQuizSteps = 8;
+const totalQuizSteps = 7;
 const startQuestionId = "tripSpark";
+const enableAiPersonalization = false;
 const personaOrder = ["weekend", "food", "budget", "luxury", "culture", "nature"];
 const personaCompatibility = {
   "budget-weekend": 0.78,
@@ -184,774 +181,177 @@ const personaCompatibility = {
   "culture-nature": 0.64,
 };
 
+const questionText = (zh, en) => ({ zh, en });
+
+function questionOption(letter, titleZh, titleEn, copyZh, copyEn, score, next) {
+  return {
+    letter,
+    title: questionText(titleZh, titleEn),
+    copy: questionText(copyZh, copyEn),
+    score,
+    ...(next ? { next } : {}),
+  };
+}
+
 const questionBank = {
   tripSpark: {
-    label: { zh: "开始搜索", en: "Start search" },
-    title: {
-      zh: "打开旅行搜索框，你第一眼想填什么？",
-      en: "You open a travel search box. What goes in first?",
-    },
+    label: questionText("出发念头", "Trip spark"),
+    title: questionText("现在最想要哪种旅行？", "What kind of trip do you want right now?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "下个周末能走的地方", en: "Somewhere I can go next weekend" },
-        copy: { zh: "先看哪里有好价、直飞和低摩擦。", en: "Start with good fares, direct routes and low friction." },
-        score: { weekend: 2, budget: 1 },
-        next: "sparkShort",
-      },
-      {
-        letter: "B",
-        title: { zh: "一个想吃很久的城市", en: "A city I have wanted to eat through" },
-        copy: { zh: "目的地可以从一口想念开始。", en: "Sometimes a destination starts with one craving." },
-        score: { food: 2 },
-        next: "sparkFood",
-      },
-      {
-        letter: "C",
-        title: { zh: "一个住进去就不想出门的酒店", en: "A hotel I would happily stay inside" },
-        copy: { zh: "如果床、早餐和浴室都对，旅行已经赢了。", en: "If the bed, breakfast and bathroom work, the trip works." },
-        score: { luxury: 2 },
-        next: "sparkStay",
-      },
-      {
-        letter: "D",
-        title: { zh: "一条可以自己开车的海岸线", en: "A coastline I can drive myself" },
-        copy: { zh: "少一点通知，多一点想停就停。", en: "Fewer notifications, more pull-over-when-you-want energy." },
-        score: { nature: 2 },
-        next: "sparkRoam",
-      },
+      questionOption("A", "两天也能换个城市", "A two-day city reset", "时间不长，也要真的离开日常。", "Short, but far enough from routine.", { weekend: 2, budget: 1 }, "sparkShort"),
+      questionOption("B", "跟着一口想吃的出发", "Follow one serious craving", "先决定吃什么，再决定去哪里。", "Pick the food, then the city.", { food: 2, culture: 1 }, "sparkFood"),
+      questionOption("C", "找个地方好好睡几晚", "Sleep properly somewhere else", "少赶路，多恢复。", "Less rushing, more recovery.", { luxury: 2, nature: 1 }, "sparkStay"),
+      questionOption("D", "沿着山海随时改路线", "Roam between coast and hills", "路线可以跟着天气走。", "Let the weather edit the route.", { nature: 2, weekend: 1 }, "sparkRoam"),
     ],
   },
   sparkShort: {
-    label: { zh: "周末闪现", en: "Weekend mode" },
-    title: { zh: "只有 48 小时，你最在意哪件事？", en: "With only 48 hours, what matters most?" },
+    label: questionText("短途习惯", "Short-trip habit"),
+    title: questionText("短途出发，你会先解决什么？", "What do you solve first for a short trip?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "航班时间别折腾", en: "Flights that do not waste the weekend" },
-        copy: { zh: "早去晚回可以，红眼崩溃不行。", en: "Early out, late back is fine. Chaos is not." },
-        score: { weekend: 2, luxury: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "B",
-        title: { zh: "落地就能开始逛", en: "Land and start exploring" },
-        copy: { zh: "机场到市区顺，才像真的赚到时间。", en: "An easy airport-to-city route feels like extra time." },
-        score: { weekend: 2, culture: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "C",
-        title: { zh: "票价要够漂亮", en: "The fare has to look good" },
-        copy: { zh: "周末短，更要花得聪明。", en: "Short trip, smarter spend." },
-        score: { budget: 2, weekend: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "D",
-        title: { zh: "周一像没走过一样", en: "Monday must still feel possible" },
-        copy: { zh: "旅行可以短，但恢复感不能短。", en: "The trip can be short. The reset cannot." },
-        score: { weekend: 1, luxury: 2 },
-        next: "bookingMoment",
-      },
+      questionOption("A", "只带一个随身包", "Take one carry-on", "少收拾，才能快出发。", "Pack less and leave faster.", { weekend: 2, nature: 1 }, "bookingChoice"),
+      questionOption("B", "选落地就能玩的时段", "Land with time to explore", "第一天不能只剩入住。", "Day one should be more than check-in.", { weekend: 2, culture: 1 }, "bookingChoice"),
+      questionOption("C", "留半天给自己恢复", "Keep half a day to recover", "回来后不想像没睡过。", "Come home without feeling wrecked.", { luxury: 2, weekend: 1 }, "bookingChoice"),
+      questionOption("D", "等票价和日期都合适", "Wait for the right fare and date", "短途也要花得明白。", "Even short trips should feel worth it.", { budget: 2, weekend: 1 }, "bookingChoice"),
     ],
   },
   sparkFood: {
-    label: { zh: "胃先出发", en: "Food first" },
-    title: { zh: "为了吃飞一趟，你会先查什么？", en: "If you fly for food, what do you check first?" },
+    label: questionText("第一顿", "First meal"),
+    title: questionText("到陌生城市，第一顿怎么选？", "How do you choose the first meal in a new city?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "夜市和街头小吃密度", en: "Market and street food density" },
-        copy: { zh: "一条街解决三顿，才叫目的地。", en: "Three meals on one street is a destination." },
-        score: { food: 2, budget: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "B",
-        title: { zh: "那家餐厅附近住哪里", en: "Where to stay near that restaurant" },
-        copy: { zh: "酒店位置要服务于晚餐路线。", en: "The hotel location should serve the dinner route." },
-        score: { food: 2, culture: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "C",
-        title: { zh: "能不能把机票省下来加餐", en: "Can the flight cost less so dinner can do more?" },
-        copy: { zh: "省下来的不是钱，是下一顿。", en: "The savings are not just money. They are another meal." },
-        score: { budget: 2, food: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "D",
-        title: { zh: "咖啡店、市集、早餐路线", en: "Coffee, markets and breakfast routes" },
-        copy: { zh: "想从早吃到晚，但节奏要顺。", en: "Eat all day, but make the route smooth." },
-        score: { food: 2, weekend: 1 },
-        next: "bookingMoment",
-      },
+      questionOption("A", "先逛市场和街边摊", "Start at a market", "边走边吃，看到什么算什么。", "Walk, taste and decide as you go.", { food: 2, budget: 1 }, "bookingChoice"),
+      questionOption("B", "提前订最想吃的那家", "Book the one place you really want", "先把期待最高的一顿锁住。", "Lock in the meal you care about most.", { food: 2, luxury: 1 }, "bookingChoice"),
+      questionOption("C", "去超市看当地人吃什么", "Browse a local supermarket", "日常食物也能读懂城市。", "Everyday food says a lot about a city.", { food: 1, culture: 1 }, "bookingChoice"),
+      questionOption("D", "不看清单，跟着香味走", "Follow whatever smells good", "好吃的也可以偶遇。", "Good food can be an accident.", { food: 1, nature: 1 }, "bookingChoice"),
     ],
   },
   sparkStay: {
-    label: { zh: "住得要对", en: "Stay first" },
-    title: { zh: "如果这趟是为了好好住，你会怎么挑？", en: "If the stay leads the trip, what do you choose for?" },
+    label: questionText("住下以后", "After check-in"),
+    title: questionText("进房间后，什么最先影响心情？", "What changes your mood first after check-in?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "床、浴室和早餐必须稳", en: "Bed, bath and breakfast must be solid" },
-        copy: { zh: "酒店不是配角，是主线。", en: "The hotel is not supporting cast. It is the plot." },
-        score: { luxury: 2 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "B",
-        title: { zh: "酒店位置能少走冤枉路", en: "A location that saves the whole route" },
-        copy: { zh: "住得对，行程表会自己变顺。", en: "A good stay makes the map behave." },
-        score: { culture: 2, luxury: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "C",
-        title: { zh: "淡季好价住更好", en: "Off-season value for a better stay" },
-        copy: { zh: "同样预算，当然想住得更漂亮。", en: "Same budget, better room. Obviously." },
-        score: { budget: 2, luxury: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "D",
-        title: { zh: "温泉、海景或庭院", en: "Onsen, sea view or garden" },
-        copy: { zh: "房间外面的风景，也算房间的一部分。", en: "The view outside the room is part of the room." },
-        score: { nature: 2, luxury: 1 },
-        next: "bookingMoment",
-      },
+      questionOption("A", "安静和一张好床", "Quiet and a good bed", "睡稳了，整趟才稳。", "A good trip starts with good sleep.", { luxury: 2 }, "bookingChoice"),
+      questionOption("B", "浴缸、窗景或阳台", "A bath, view or balcony", "房间里也要有度假感。", "The room should feel like part of the trip.", { luxury: 1, nature: 1 }, "bookingChoice"),
+      questionOption("C", "下楼就能逛的街区", "A neighborhood outside the door", "位置好，城市会更轻松。", "The right location makes the city easier.", { culture: 2, luxury: 1 }, "bookingChoice"),
+      questionOption("D", "淡季价格换更好房间", "Off-season value for a better room", "同样预算，当然想住得更好。", "Same budget, better room.", { budget: 2, luxury: 1 }, "bookingChoice"),
     ],
   },
   sparkRoam: {
-    label: { zh: "自由行打开", en: "Roam mode" },
-    title: { zh: "自由行第一天，你最想拥有哪种自由？", en: "On day one, what kind of freedom do you want most?" },
+    label: questionText("离线时刻", "Offline moment"),
+    title: questionText("手机突然没信号，你会？", "Your phone loses signal. What do you do?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "租车想停就停", en: "Car hire and stop-anywhere freedom" },
-        copy: { zh: "看到海就靠边，看到云就改线。", en: "Pull over for the sea. Reroute for the sky." },
-        score: { nature: 2 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "B",
-        title: { zh: "躲开热门景点", en: "Skip the obvious stops" },
-        copy: { zh: "想找城市的背面，不想复制攻略。", en: "You want the back side of the city, not a copied guide." },
-        score: { nature: 1, culture: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "C",
-        title: { zh: "住远一点换更大空间", en: "Stay farther out for more space" },
-        copy: { zh: "安静、舒服、价格也能好看。", en: "Quiet, comfortable and better value." },
-        score: { nature: 1, luxury: 1, budget: 1 },
-        next: "bookingMoment",
-      },
-      {
-        letter: "D",
-        title: { zh: "天气好就临时改线", en: "Change the route if the weather says so" },
-        copy: { zh: "计划可以有，但天空优先级更高。", en: "Plans are useful. The sky gets final say." },
-        score: { nature: 2, weekend: 1 },
-        next: "bookingMoment",
-      },
+      questionOption("A", "打开提前存好的离线地图", "Open the offline map", "自由归自由，方向还是要有。", "Free, but not directionless.", { culture: 2, nature: 1 }, "bookingChoice"),
+      questionOption("B", "沿着眼前顺眼的路走", "Take the road that looks good", "走错也可能是新路线。", "A wrong turn can become the route.", { nature: 2 }, "bookingChoice"),
+      questionOption("C", "问当地人附近有什么", "Ask someone nearby", "方向和吃的都可以顺便问。", "Ask for a direction and maybe a meal.", { nature: 1, food: 1 }, "bookingChoice"),
+      questionOption("D", "先回到熟悉的交通线上", "Return to a familiar route", "省下折腾，把体力留给风景。", "Save the energy for the actual trip.", { weekend: 1, luxury: 1 }, "bookingChoice"),
     ],
   },
-  bookingMoment: {
-    label: { zh: "订之前", en: "Before booking" },
-    title: { zh: "同一个目的地有四种方案，你会点进哪个？", en: "Same destination, four options. Which one do you open?" },
+  bookingChoice: {
+    label: questionText("核心取舍", "Core trade-off"),
+    title: questionText("只能优先一件事，你会选？", "If only one thing can come first, what is it?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "最便宜但要早起转机", en: "Cheapest, but early with a connection" },
-        copy: { zh: "只要总价够香，可以认真计算。", en: "If the total price works, it deserves a spreadsheet." },
-        score: { budget: 2 },
-        next: "focusValue",
-      },
-      {
-        letter: "B",
-        title: { zh: "直飞贵一点但省时间", en: "Direct, slightly more, much smoother" },
-        copy: { zh: "少折腾就是隐形预算。", en: "Less hassle is hidden value." },
-        score: { weekend: 1, luxury: 1 },
-        next: "focusSmooth",
-      },
-      {
-        letter: "C",
-        title: { zh: "住在核心街区，机票普通也行", en: "A central stay, even if the fare is ordinary" },
-        copy: { zh: "位置对了，城市会变好逛。", en: "The right location makes the city easier to read." },
-        score: { culture: 2, luxury: 1 },
-        next: "focusRoute",
-      },
-      {
-        letter: "D",
-        title: { zh: "租车或交通最自由的组合", en: "The option with the most flexible transport" },
-        copy: { zh: "不想被路线绑住。", en: "You do not want the route to own you." },
-        score: { nature: 2 },
-        next: "focusFreedom",
-      },
+      questionOption("A", "总价始终可控", "Keep the total cost under control", "每一笔都知道花在哪里。", "Know where every part of the budget goes.", { budget: 3 }, "budgetReality"),
+      questionOption("B", "从家到酒店少折腾", "Make door-to-door travel easy", "路上顺，假期才完整。", "A smoother journey protects the holiday.", { weekend: 2, luxury: 1 }, "paceReality"),
+      questionOption("C", "每天有一个确定期待", "Have one anchor each day", "一顿饭、一个展或一条街都行。", "A meal, an exhibit or one good street.", { culture: 2, food: 1 }, "curiosityReality"),
+      questionOption("D", "行程随时可以调整", "Keep the plan changeable", "天气和心情都有决定权。", "Let weather and mood have a vote.", { nature: 2 }, "weatherReality"),
     ],
   },
-  focusValue: {
-    label: { zh: "价格波动", en: "Price moves" },
-    title: { zh: "价格开始波动，你的真实反应？", en: "Prices start moving. What do you actually do?" },
+  budgetReality: {
+    label: questionText("预算变化", "Budget change"),
+    title: questionText("总价突然多了 20%，你先改哪项？", "The total jumps 20%. What changes first?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "开价格提醒，等一个漂亮数字", en: "Set an alert and wait for the number" },
-        copy: { zh: "好价出现那一刻，比种草还上头。", en: "A good fare alert can beat a saved post." },
-        score: { budget: 2 },
-        next: "valueRitual",
-      },
-      {
-        letter: "B",
-        title: { zh: "换日期，把总价压下来", en: "Shift dates to bring the total down" },
-        copy: { zh: "灵活不是妥协，是技能。", en: "Flexibility is not compromise. It is a skill." },
-        score: { budget: 2, weekend: 1 },
-        next: "valueRitual",
-      },
-      {
-        letter: "C",
-        title: { zh: "少住一晚也要住好一点", en: "One fewer night, better stay" },
-        copy: { zh: "预算要省，但体验不能垮。", en: "Save the budget. Keep the feeling." },
-        score: { budget: 1, luxury: 1 },
-        next: "valueRitual",
-      },
-      {
-        letter: "D",
-        title: { zh: "省下的钱留给吃和体验", en: "Save on transport, spend on food and moments" },
-        copy: { zh: "机票便宜一点，城市就多一口。", en: "A cheaper flight leaves room for another bite." },
-        score: { budget: 1, food: 1 },
-        next: "valueRitual",
-      },
+      questionOption("A", "酒店降一级", "Choose a simpler stay", "睡得干净就行。", "Clean and comfortable is enough.", { budget: 2 }, "travelBuddy"),
+      questionOption("B", "少住一晚", "Stay one night less", "时间缩短，重点保留。", "Shorten the trip, keep the highlights.", { budget: 1, weekend: 1 }, "travelBuddy"),
+      questionOption("C", "放弃一个热门体验", "Skip one famous experience", "不为打卡硬花钱。", "Do not pay just to tick a box.", { budget: 1, culture: 1 }, "travelBuddy"),
+      questionOption("D", "不改，舒服更重要", "Keep it — comfort matters more", "多花一点，少累一点。", "Spend a little more, struggle less.", { luxury: 2 }, "travelBuddy"),
     ],
   },
-  focusSmooth: {
-    label: { zh: "顺一点", en: "Smoother trip" },
-    title: { zh: "为了顺一点，你愿意把钱花在哪？", en: "Where is smoothness worth paying for?" },
+  paceReality: {
+    label: questionText("空出来的时间", "An open afternoon"),
+    title: questionText("下午突然空出三小时，你会？", "Three free hours appear. What do you do?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "直飞和好时段", en: "Direct flights and humane timings" },
-        copy: { zh: "不想把假期浪费在机场椅子上。", en: "No one dreams of spending holiday time in airport chairs." },
-        score: { weekend: 1, luxury: 1 },
-        next: "smoothRitual",
-      },
-      {
-        letter: "B",
-        title: { zh: "不用搬行李的酒店位置", en: "A hotel location that saves luggage drama" },
-        copy: { zh: "行李少折腾，人也少崩溃。", en: "Less luggage drama, better person." },
-        score: { luxury: 1, culture: 1 },
-        next: "smoothRitual",
-      },
-      {
-        letter: "C",
-        title: { zh: "能睡好的房间", en: "A room that lets you sleep properly" },
-        copy: { zh: "出去玩，不是出去硬撑。", en: "Travel is not an endurance test." },
-        score: { luxury: 2 },
-        next: "smoothRitual",
-      },
-      {
-        letter: "D",
-        title: { zh: "机场到酒店交通简单", en: "Simple airport-to-stay transport" },
-        copy: { zh: "落地第一小时别考验人生。", en: "The first hour after landing should not test you." },
-        score: { weekend: 1, luxury: 1 },
-        next: "smoothRitual",
-      },
+      questionOption("A", "回酒店睡一觉", "Go back for a nap", "空档就是用来回血的。", "Free time is recovery time.", { luxury: 2 }, "travelBuddy"),
+      questionOption("B", "找一顿没计划的好吃的", "Find an unplanned meal", "多出来的时间刚好加餐。", "Extra time means an extra bite.", { food: 2 }, "travelBuddy"),
+      questionOption("C", "看附近有没有展览", "Look for a nearby exhibition", "不赶远路，也不浪费兴趣。", "Stay nearby and follow the curiosity.", { culture: 2 }, "travelBuddy"),
+      questionOption("D", "去城外走一小段", "Take a short trip outside town", "换个视野再回来。", "Change the view, then come back.", { nature: 2 }, "travelBuddy"),
     ],
   },
-  focusRoute: {
-    label: { zh: "路线脑", en: "Route brain" },
-    title: { zh: "你排路线最怕什么？", en: "What is the worst route-planning mistake?" },
+  curiosityReality: {
+    label: questionText("陌生街区", "New neighborhood"),
+    title: questionText("走进没做攻略的街区，你先注意什么？", "What catches you first in an unplanned neighborhood?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "点位太散，一直坐车", en: "Everything is scattered, so you sit in transit" },
-        copy: { zh: "路线上浪费的时间，都是体验成本。", en: "Time lost in transit is part of the trip cost." },
-        score: { culture: 2 },
-        next: "routeRitual",
-      },
-      {
-        letter: "B",
-        title: { zh: "餐厅订不到，计划全乱", en: "The restaurant falls through and the plan collapses" },
-        copy: { zh: "真正的硬核行程，是先保护晚餐。", en: "Advanced planning starts by protecting dinner." },
-        score: { food: 2, culture: 1 },
-        next: "routeRitual",
-      },
-      {
-        letter: "C",
-        title: { zh: "行程太空，感觉亏了", en: "The day feels too empty" },
-        copy: { zh: "不是要赶，是想把城市读完整。", en: "It is not about rushing. It is about reading the city." },
-        score: { culture: 1, budget: 1 },
-        next: "routeRitual",
-      },
-      {
-        letter: "D",
-        title: { zh: "同行的人临时改主意", en: "Someone changes the plan last minute" },
-        copy: { zh: "可以改，但最好先开个会。", en: "Changes are possible. Ideally after a tiny summit." },
-        score: { culture: 2 },
-        next: "routeRitual",
-      },
+      questionOption("A", "老建筑和街道故事", "Old buildings and street stories", "想知道这里为什么长这样。", "You want to know why the place looks this way.", { culture: 2 }, "travelBuddy"),
+      questionOption("B", "排队的小店和香味", "Queues and good smells", "当地人的饭点很诚实。", "Local lunch queues are honest clues.", { food: 2 }, "travelBuddy"),
+      questionOption("C", "店铺、酒店和空间设计", "Shops, hotels and design", "细节好看，走路也有意思。", "Good details make walking worthwhile.", { culture: 1, luxury: 1 }, "travelBuddy"),
+      questionOption("D", "树荫、水边和安静小路", "Shade, water and quiet paths", "先找到能慢下来的方向。", "Find the route that slows things down.", { nature: 2 }, "travelBuddy"),
     ],
   },
-  focusFreedom: {
-    label: { zh: "自由度", en: "Freedom level" },
-    title: { zh: "自由行最不能缺哪项？", en: "What can a self-guided trip not miss?" },
+  weatherReality: {
+    label: questionText("天气改线", "Weather reroute"),
+    title: questionText("大雨打乱行程，你会？", "Heavy rain breaks the plan. What now?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "租车选择多，临时换路线", en: "More car hire options, easier reroutes" },
-        copy: { zh: "方向盘在手，地图才是真的打开。", en: "With the wheel in hand, the map opens properly." },
-        score: { nature: 2 },
-        next: "freedomRitual",
-      },
-      {
-        letter: "B",
-        title: { zh: "酒店可以取消或调整", en: "Flexible stays I can change" },
-        copy: { zh: "自由行的安全感，是可调整。", en: "Flexibility is the safety net." },
-        score: { nature: 1, budget: 1 },
-        next: "freedomRitual",
-      },
-      {
-        letter: "C",
-        title: { zh: "每天只定一个大方向", en: "One big direction per day" },
-        copy: { zh: "留白不是浪费，是给风景让路。", en: "Blank space is not waste. It lets the view happen." },
-        score: { nature: 2 },
-        next: "freedomRitual",
-      },
-      {
-        letter: "D",
-        title: { zh: "安静但不麻烦的住处", en: "Quiet stays that are still easy" },
-        copy: { zh: "想离线，但不想求生。", en: "Offline, not survival mode." },
-        score: { nature: 1, luxury: 1 },
-        next: "freedomRitual",
-      },
-    ],
-  },
-  valueRitual: {
-    label: { zh: "捡漏动作", en: "Deal ritual" },
-    title: { zh: "看到价格降了，你下一步会做什么？", en: "A price drops. What do you do next?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "立刻截图发群：这价格能冲", en: "Send the screenshot: this fare can go" },
-        copy: { zh: "先别问请假，先锁住机会。", en: "Before the leave request, protect the chance." },
-        score: { budget: 2, weekend: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "B",
-        title: { zh: "再查附近酒店，确认总价没反转", en: "Check nearby stays so the total still works" },
-        copy: { zh: "便宜机票不能被贵酒店背刺。", en: "A cheap flight should not get ambushed by the stay." },
-        score: { budget: 2, luxury: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "C",
-        title: { zh: "换城市比一圈，看有没有隐藏好价", en: "Compare nearby cities for hidden value" },
-        copy: { zh: "真正的捡漏，是连目的地都灵活。", en: "Real deal hunting keeps even the destination flexible." },
-        score: { budget: 2, nature: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "D",
-        title: { zh: "把省下的钱标给吃饭和体验", en: "Move the savings to food and experiences" },
-        copy: { zh: "省下来的不是钱，是下一顿和下一站。", en: "The savings become the next meal and the next stop." },
-        score: { budget: 1, food: 1 },
-        next: "travelBuddy",
-      },
-    ],
-  },
-  smoothRitual: {
-    label: { zh: "舒服值", en: "Comfort score" },
-    title: { zh: "你最不想在旅途中被什么打断？", en: "What do you least want interrupting the trip?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "半夜转机和奇怪航班时间", en: "Overnight connections and odd flight times" },
-        copy: { zh: "假期不是用来练极限生存的。", en: "A holiday is not survival training." },
-        score: { weekend: 1, luxury: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "B",
-        title: { zh: "酒店离哪里都远", en: "A stay far from everything" },
-        copy: { zh: "住错位置，整座城市都变远。", en: "The wrong location makes the whole city farther away." },
-        score: { culture: 1, luxury: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "C",
-        title: { zh: "拖着行李找不到路", en: "Dragging luggage while lost" },
-        copy: { zh: "人在路上，行李别上强度。", en: "The person can travel. The luggage should not suffer." },
-        score: { luxury: 2 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "D",
-        title: { zh: "同行突然把节奏拉满", en: "Someone suddenly maxes out the pace" },
-        copy: { zh: "出门是回血，不是参加体测。", en: "The trip is for recovery, not a fitness test." },
-        score: { luxury: 1, nature: 1 },
-        next: "travelBuddy",
-      },
-    ],
-  },
-  routeRitual: {
-    label: { zh: "收藏夹", en: "Saved list" },
-    title: { zh: "出发前一晚，你的手机里最满的是？", en: "The night before departure, what fills your phone?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "地图上密密麻麻的星标", en: "A map full of saved stars" },
-        copy: { zh: "城市还没到，路线已经开始排队。", en: "The city has not started, but the route already has." },
-        score: { culture: 2 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "B",
-        title: { zh: "餐厅收藏夹和预约截图", en: "Restaurant saves and booking screenshots" },
-        copy: { zh: "行程表的核心，其实是饭点。", en: "The core of the itinerary is actually mealtime." },
-        score: { food: 2 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "C",
-        title: { zh: "交通、营业时间和备用路线", en: "Transit, opening hours and backup routes" },
-        copy: { zh: "不一定要紧绷，但必须有后手。", en: "Not tense, just prepared." },
-        score: { culture: 2, budget: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "D",
-        title: { zh: "下雨、排队、关门怎么办", en: "Rain, queues and closed doors backup plan" },
-        copy: { zh: "真正的计划感，是连意外都安排座位。", en: "Real planning gives surprises a seat too." },
-        score: { culture: 1, luxury: 1 },
-        next: "travelBuddy",
-      },
-    ],
-  },
-  freedomRitual: {
-    label: { zh: "临时改线", en: "Reroute mode" },
-    title: { zh: "路上突然发现一个计划外的点，你会？", en: "You spot an unplanned stop on the road. What happens?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "方向盘一打，直接过去", en: "Turn the wheel and go" },
-        copy: { zh: "计划外才有自由行的爽点。", en: "The unplanned stop is the point of roaming." },
-        score: { nature: 2 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "B",
-        title: { zh: "查一下时间距离，顺路才去", en: "Check time and distance first" },
-        copy: { zh: "自由可以有，脑子也要在线。", en: "Freedom can stay smart." },
-        score: { nature: 1, culture: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "C",
-        title: { zh: "先看附近有没有好吃的", en: "Check whether good food is nearby" },
-        copy: { zh: "风景决定方向，饭决定停留。", en: "The view sets the direction. Food decides the stop." },
-        score: { food: 1, nature: 1 },
-        next: "travelBuddy",
-      },
-      {
-        letter: "D",
-        title: { zh: "如果酒店能晚点回，马上改线", en: "If the stay can flex, reroute now" },
-        copy: { zh: "自由感来自路上，也来自不用赶回去。", en: "Freedom comes from the road and from not rushing back." },
-        score: { nature: 1, luxury: 1 },
-        next: "travelBuddy",
-      },
+      questionOption("A", "换成博物馆或书店", "Switch to a museum or bookshop", "室内也能继续认识城市。", "Keep discovering the city indoors.", { culture: 2 }, "travelBuddy"),
+      questionOption("B", "就近找家店慢慢吃", "Settle in for a long meal", "雨停之前先照顾胃。", "Feed yourself while the rain passes.", { food: 2 }, "travelBuddy"),
+      questionOption("C", "回酒店泡澡或补觉", "Return for a bath or nap", "天气不好，休息可以更好。", "Bad weather can still mean good rest.", { luxury: 2 }, "travelBuddy"),
+      questionOption("D", "查哪里天晴就往哪走", "Find clearer skies and reroute", "目的地没变，路线可以变。", "Keep the destination, change the route.", { nature: 2, weekend: 1 }, "travelBuddy"),
     ],
   },
   travelBuddy: {
-    label: { zh: "旅游搭子", en: "Travel buddy" },
-    title: { zh: "朋友说：这趟要不要一起？你最想先对齐什么？", en: "A friend says: should we go together? What do you align first?" },
+    label: questionText("同行角色", "Travel role"),
+    title: questionText("一起旅行时，你通常会接手什么？", "What do you naturally take charge of on a group trip?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "预算上限和钱花在哪", en: "Budget ceiling and where the money goes" },
-        copy: { zh: "钱观合，旅行搭子才合。", en: "Compatible budgets make compatible travel buddies." },
-        score: { budget: 2 },
-        next: "finalBudget",
-      },
-      {
-        letter: "B",
-        title: { zh: "每天起床和回酒店时间", en: "Wake-up and back-to-hotel timing" },
-        copy: { zh: "作息不合，比目的地不合更可怕。", en: "Mismatched rhythms are worse than mismatched destinations." },
-        score: { luxury: 1, culture: 1 },
-        next: "finalRest",
-      },
-      {
-        letter: "C",
-        title: { zh: "必吃/必逛清单", en: "Must-eat and must-see lists" },
-        copy: { zh: "先确认高光，其他再自由发挥。", en: "Lock the highlights, then let the rest flex." },
-        score: { food: 1, culture: 1 },
-        next: "finalPlan",
-      },
-      {
-        letter: "D",
-        title: { zh: "能不能接受临时改线", en: "How flexible the route can be" },
-        copy: { zh: "旅行搭子合不合，一改线就知道。", en: "You learn a travel buddy fast when the route changes." },
-        score: { nature: 2, weekend: 1 },
-        next: "finalSpontaneous",
-      },
+      questionOption("A", "预算和预订", "Budget and bookings", "先把大账和关键时间定住。", "Lock the big costs and key times.", { budget: 2, weekend: 1 }, "buddyBudget"),
+      questionOption("B", "餐厅和大家的胃", "Meals and everyone's appetite", "别的能晚，饭点不能乱。", "Other things can slip. Meals cannot.", { food: 2, luxury: 1 }, "buddyFood"),
+      questionOption("C", "路线和门票", "Routes and tickets", "让大家少排队、少回头。", "Less queueing, less backtracking.", { culture: 2, weekend: 1 }, "buddyPlan"),
+      questionOption("D", "留白和临时调整", "Space and last-minute changes", "计划不用满，大家舒服就好。", "The plan can stay loose if everyone feels good.", { nature: 2, luxury: 1 }, "buddyFlex"),
     ],
   },
-  finalBudget: {
-    label: { zh: "最后一晚", en: "Last night" },
-    title: { zh: "你想怎么证明这趟很值？", en: "How do you prove this trip was worth it?" },
+  buddyBudget: {
+    label: questionText("一起花钱", "Shared spending"),
+    title: questionText("大家花钱习惯不同，怎样最公平？", "Different spending habits: what feels fairest?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "总价比预期低，但体验没少", en: "Total cost came in lower, experience did not" },
-        copy: { zh: "这不是省，是赢。", en: "That is not just saving. That is winning." },
-        score: { budget: 2 },
-        next: "afterBudget",
-      },
-      {
-        letter: "B",
-        title: { zh: "便宜机票让我多吃了两顿", en: "A cheaper flight funded two more meals" },
-        copy: { zh: "预算流向了更快乐的地方。", en: "The budget went somewhere happier." },
-        score: { budget: 1, food: 1 },
-        next: "afterBudget",
-      },
-      {
-        letter: "C",
-        title: { zh: "错峰出发，人少价好", en: "Off-peak timing, fewer people, better price" },
-        copy: { zh: "时间选对，目的地自动加分。", en: "The right timing upgrades the place." },
-        score: { budget: 2, weekend: 1 },
-        next: "afterBudget",
-      },
-      {
-        letter: "D",
-        title: { zh: "住得舒服还没超预算", en: "Comfortable stay, still under budget" },
-        copy: { zh: "价格和睡眠都站在你这边。", en: "Both price and sleep were on your side." },
-        score: { budget: 1, luxury: 1 },
-        next: "afterBudget",
-      },
+      questionOption("A", "每笔按实际消费分", "Split each item by use", "清楚一点，回来不用猜。", "Keep it clear and avoid guessing later.", { budget: 2, culture: 1 }, "lastTurn"),
+      questionOption("B", "轮流请客，差不多就行", "Take turns paying", "账不用太细，气氛更重要。", "Keep the math light and the mood easy.", { budget: 1, food: 1 }, "lastTurn"),
+      questionOption("C", "只先对齐住宿和交通", "Align only on stays and transport", "大项一致，小项各自自由。", "Agree on big costs, keep small ones personal.", { budget: 1, nature: 1 }, "lastTurn"),
+      questionOption("D", "为省时间和舒服多付一点", "Pay more for time and comfort", "有些便利值得一起买。", "Some convenience is worth sharing.", { luxury: 2, weekend: 1 }, "lastTurn"),
     ],
   },
-  finalRest: {
-    label: { zh: "睡前复盘", en: "Before sleep" },
-    title: { zh: "临睡前，你最满意哪一刻？", en: "Before sleeping, what feels most satisfying?" },
+  buddyFood: {
+    label: questionText("口味不同", "Different tastes"),
+    title: questionText("同行口味不一样，怎么安排？", "Your group wants different food. What works?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "酒店床太好，直接满血", en: "The hotel bed fully restored me" },
-        copy: { zh: "旅行的尽头，是一张好床。", en: "The end of the day is a good bed." },
-        score: { luxury: 2 },
-        next: "afterRest",
-      },
-      {
-        letter: "B",
-        title: { zh: "路线没有乱，大家都不累", en: "The route held together and nobody crashed" },
-        copy: { zh: "顺，是最高级的舒适。", en: "Smooth is a kind of luxury." },
-        score: { culture: 1, luxury: 1 },
-        next: "afterRest",
-      },
-      {
-        letter: "C",
-        title: { zh: "早餐、浴缸、景色都在线", en: "Breakfast, bath and view all worked" },
-        copy: { zh: "细节在线，假期才在线。", en: "When the details work, the holiday works." },
-        score: { luxury: 2 },
-        next: "afterRest",
-      },
-      {
-        letter: "D",
-        title: { zh: "什么都没赶，时间刚刚好", en: "Nothing rushed, everything had enough time" },
-        copy: { zh: "慢下来才感觉真的出门了。", en: "Slowing down made it feel real." },
-        score: { luxury: 1, nature: 1 },
-        next: "afterRest",
-      },
+      questionOption("A", "去市场，各吃各的", "Go to a market and split up", "选择多，也不用互相迁就。", "More choice, less compromise.", { food: 2, nature: 1 }, "lastTurn"),
+      questionOption("B", "提前订一家都能接受的", "Book one place everyone likes", "先保住一顿共同期待。", "Protect one meal everyone can enjoy.", { food: 1, culture: 1 }, "lastTurn"),
+      questionOption("C", "早餐在酒店解决", "Use the hotel breakfast as a base", "先吃稳，再各自探索。", "Start easy, explore later.", { luxury: 2, food: 1 }, "lastTurn"),
+      questionOption("D", "一人选一顿", "Take turns choosing meals", "每个人都有自己的主场。", "Everyone gets a turn.", { food: 1, weekend: 1 }, "lastTurn"),
     ],
   },
-  finalPlan: {
-    label: { zh: "高光时刻", en: "Highlight reel" },
-    title: { zh: "这趟旅行最值得被截图的是？", en: "What deserves the screenshot from this trip?" },
+  buddyPlan: {
+    label: questionText("计划变化", "Plan change"),
+    title: questionText("同行迟到半小时，你会？", "Someone is 30 minutes late. What do you do?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "收藏的店真的都吃到了", en: "Every saved food spot actually happened" },
-        copy: { zh: "收藏夹终于变成了现实。", en: "The saved list became real." },
-        score: { food: 2 },
-        next: "afterPlan",
-      },
-      {
-        letter: "B",
-        title: { zh: "路线顺到像做过模拟", en: "The route was suspiciously smooth" },
-        copy: { zh: "不走回头路，就是城市探索的爽点。", en: "No backtracking is the joy of a good city plan." },
-        score: { culture: 2 },
-        next: "afterPlan",
-      },
-      {
-        letter: "C",
-        title: { zh: "每天一个主题，很有章法", en: "One theme per day, clean and satisfying" },
-        copy: { zh: "不是特种兵，是有结构。", en: "Not overpacked. Structured." },
-        score: { culture: 2 },
-        next: "afterPlan",
-      },
-      {
-        letter: "D",
-        title: { zh: "临时发现的小店变成高光", en: "A random find became the highlight" },
-        copy: { zh: "计划很好，惊喜也要留门。", en: "The plan was good. The surprise got in." },
-        score: { food: 1, nature: 1 },
-        next: "afterPlan",
-      },
+      questionOption("A", "马上重排后面的路线", "Reorder the route", "顺序可以变，重点别丢。", "Change the order, keep the highlights.", { culture: 2 }, "lastTurn"),
+      questionOption("B", "删掉一个点，别再赶", "Drop one stop", "少看一个，也别全程焦虑。", "See less without rushing the rest.", { luxury: 1, culture: 1 }, "lastTurn"),
+      questionOption("C", "先分开，下一站集合", "Split up and meet later", "不同节奏也能共存。", "Different paces can coexist.", { nature: 1, food: 1 }, "lastTurn"),
+      questionOption("D", "就近换一个替代选项", "Pick a nearby alternative", "不用完美，别停在原地。", "It need not be perfect — keep moving.", { weekend: 2, culture: 1 }, "lastTurn"),
     ],
   },
-  finalSpontaneous: {
-    label: { zh: "说走就走", en: "Go-now energy" },
-    title: { zh: "最后你会怎么形容这趟？", en: "How would you describe the trip in the end?" },
+  buddyFlex: {
+    label: questionText("临时提议", "Sudden idea"),
+    title: questionText("路上有人突然想改线，你会？", "Someone suddenly wants to reroute. Your response?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "说走就走真的走成了", en: "The spontaneous plan actually happened" },
-        copy: { zh: "能出发，就是最高效率。", en: "Leaving is the highest efficiency." },
-        score: { weekend: 2 },
-        next: "afterSpontaneous",
-      },
-      {
-        letter: "B",
-        title: { zh: "自驾停在了计划外的海边", en: "The drive stopped at an unplanned coast" },
-        copy: { zh: "计划外，才是这趟的主角。", en: "The unplanned bit became the main event." },
-        score: { nature: 2 },
-        next: "afterSpontaneous",
-      },
-      {
-        letter: "C",
-        title: { zh: "少看手机，多看风景", en: "Less phone, more view" },
-        copy: { zh: "断网不是失联，是回血。", en: "Offline was not missing out. It was recovery." },
-        score: { nature: 2 },
-        next: "afterSpontaneous",
-      },
-      {
-        letter: "D",
-        title: { zh: "临时抢到便宜票，直接赚到", en: "Last-minute fare, instant win" },
-        copy: { zh: "冲动和好价同时出现，谁顶得住。", en: "Impulse plus a good fare is hard to resist." },
-        score: { weekend: 1, budget: 1 },
-        next: "afterSpontaneous",
-      },
+      questionOption("A", "有意思就现在去", "If it sounds good, go now", "难得都到了，别等下次。", "You are already here — do not wait for next time.", { nature: 2, weekend: 1 }, "lastTurn"),
+      questionOption("B", "先看距离和关门时间", "Check distance and closing time", "临时也可以有基本判断。", "Spontaneous can still be sensible.", { nature: 1, culture: 1 }, "lastTurn"),
+      questionOption("C", "先看附近有没有好吃的", "Check the food nearby", "路线能改，饭点也要接得上。", "Reroute, but keep the meal working.", { nature: 1, food: 1 }, "lastTurn"),
+      questionOption("D", "今天累了就留到明天", "Save it for tomorrow if tired", "自由也包括选择不去。", "Freedom also means choosing not to go.", { luxury: 2 }, "lastTurn"),
     ],
   },
-  afterBudget: {
-    label: { zh: "晒图文案", en: "Share caption" },
-    title: { zh: "回家后，你最想怎么发这趟？", en: "Back home, how would you post this trip?" },
+  lastTurn: {
+    label: questionText("留给下次", "Keep for next time"),
+    title: questionText("下次旅行，你最想保留哪个习惯？", "Which habit would you keep for the next trip?"),
     options: [
-      {
-        letter: "A",
-        title: { zh: "人均比想象低，但体验没缩水", en: "Lower per-person cost, no experience lost" },
-        copy: { zh: "这条笔记的标题可以叫：钱花得真会。", en: "The caption writes itself: smart spend, full trip." },
-        score: { budget: 2 },
-      },
-      {
-        letter: "B",
-        title: { zh: "用省下来的钱多吃一顿", en: "The savings became one more meal" },
-        copy: { zh: "预算没有消失，只是变成了快乐。", en: "The budget did not vanish. It became joy." },
-        score: { budget: 1, food: 1 },
-      },
-      {
-        letter: "C",
-        title: { zh: "错峰捡漏成功，像中了隐藏关", en: "Off-peak deal, hidden level cleared" },
-        copy: { zh: "人少、价好、心情稳定，三件套齐了。", en: "Fewer crowds, better value, calmer mood." },
-        score: { budget: 2, weekend: 1 },
-      },
-      {
-        letter: "D",
-        title: { zh: "住得舒服还没超预算", en: "A good stay still stayed on budget" },
-        copy: { zh: "会比价的人，连躺平都更高级。", en: "Good comparing makes comfort feel smarter." },
-        score: { budget: 1, luxury: 1 },
-      },
-    ],
-  },
-  afterRest: {
-    label: { zh: "回家回血", en: "Reset check" },
-    title: { zh: "回家后，你给这趟最高分的原因是？", en: "Back home, why does this trip get full marks?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "回来没有报废，甚至还能上班", en: "I came back functional enough for work" },
-        copy: { zh: "这不是旅行，这是低损耗充电。", en: "Not just travel. Low-damage recharging." },
-        score: { luxury: 2 },
-      },
-      {
-        letter: "B",
-        title: { zh: "酒店像充电站，睡完人就正常了", en: "The hotel worked like a charging dock" },
-        copy: { zh: "床一好，世界都好商量。", en: "When the bed works, the world behaves." },
-        score: { luxury: 2 },
-      },
-      {
-        letter: "C",
-        title: { zh: "每天节奏刚好，没有被行程追着跑", en: "Every day had enough room to breathe" },
-        copy: { zh: "不赶场，才是真的度假感。", en: "No rushing is the actual holiday feeling." },
-        score: { luxury: 1, nature: 1 },
-      },
-      {
-        letter: "D",
-        title: { zh: "该吃该逛都有，但没有崩溃", en: "Food and exploring happened without burnout" },
-        copy: { zh: "完成度和舒适度终于站到了一边。", en: "Completion and comfort finally teamed up." },
-        score: { culture: 1, luxury: 1 },
-      },
-    ],
-  },
-  afterPlan: {
-    label: { zh: "复盘时刻", en: "Post-trip review" },
-    title: { zh: "整理照片时，你最想夸自己哪一点？", en: "Sorting photos, what would you praise yourself for?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "Excel 表居然真的救了全程", en: "The spreadsheet genuinely saved the trip" },
-        copy: { zh: "别人发九宫格，你先更新版本号。", en: "Others post photos. You update the version number." },
-        score: { culture: 2 },
-      },
-      {
-        letter: "B",
-        title: { zh: "每一顿都在正确的时间出现", en: "Every meal appeared at the right time" },
-        copy: { zh: "饭点排得好，旅行烦恼少。", en: "Good meal timing solves half the trip." },
-        score: { food: 2, culture: 1 },
-      },
-      {
-        letter: "C",
-        title: { zh: "酒店位置选对，少走一半冤枉路", en: "The stay location saved so much walking" },
-        copy: { zh: "选址正确，路线自动变聪明。", en: "A good location makes the route smarter." },
-        score: { culture: 1, luxury: 1 },
-      },
-      {
-        letter: "D",
-        title: { zh: "计划留了空，所以惊喜进来了", en: "The plan had gaps, so surprise got in" },
-        copy: { zh: "高级计划不是填满，是会呼吸。", en: "A good plan is not packed. It breathes." },
-        score: { culture: 1, nature: 1 },
-      },
-    ],
-  },
-  afterSpontaneous: {
-    label: { zh: "下次还敢", en: "Next time" },
-    title: { zh: "这趟结束后，你最想保留哪个习惯？", en: "After this trip, what habit would you keep?" },
-    options: [
-      {
-        letter: "A",
-        title: { zh: "看到好价先收藏，不等灵感过期", en: "Save good fares before the idea expires" },
-        copy: { zh: "说走就走，也需要一点手速。", en: "Spontaneity still likes quick reflexes." },
-        score: { budget: 1, weekend: 1 },
-      },
-      {
-        letter: "B",
-        title: { zh: "每次都留半天给随机事件", en: "Always leave half a day for randomness" },
-        copy: { zh: "给未知留时间，旅行才会长出剧情。", en: "Give the unknown time and the trip gets a plot." },
-        score: { nature: 2 },
-      },
-      {
-        letter: "C",
-        title: { zh: "租车或交通自由度优先", en: "Prioritize car hire or flexible transport" },
-        copy: { zh: "能停、能改、能绕路，才叫打开地图。", en: "Stop, reroute, detour. That is how the map opens." },
-        score: { nature: 2 },
-      },
-      {
-        letter: "D",
-        title: { zh: "少刷手机，多听当地节奏", en: "Less scrolling, more local rhythm" },
-        copy: { zh: "离线一点，反而更像真的到了。", en: "Being a little offline makes arrival feel real." },
-        score: { nature: 1, luxury: 1 },
-      },
+      questionOption("A", "看到合适的周末就出发", "Leave when a good weekend appears", "灵感别放到过期。", "Do not let the idea expire.", { weekend: 2, budget: 1 }),
+      questionOption("B", "每到一地认真吃一顿", "Give every place one proper meal", "用味道记住目的地。", "Remember the place through taste.", { food: 2, culture: 1 }),
+      questionOption("C", "少排一个点，住舒服一点", "Plan one stop less and rest better", "回来时也要有电。", "Come home with some energy left.", { luxury: 2, nature: 1 }),
+      questionOption("D", "留半天给计划外", "Leave half a day unplanned", "让天气和偶遇参与决定。", "Let weather and chance join the plan.", { nature: 2, culture: 1 }),
     ],
   },
 };
@@ -1169,6 +569,105 @@ const personas = {
   },
 };
 
+const personaDestinationAlternatives = {
+  weekend: [
+    {
+      destination: { zh: "首尔", en: "Seoul" },
+      note: {
+        zh: "这次抽中首尔：交通清楚、街区密度高，咖啡、逛街和夜宵很容易压缩进一个短周末。",
+        en: "This time you matched Seoul: clear transport and dense neighborhoods make coffee, shopping and late-night food fit a short weekend.",
+      },
+    },
+    {
+      destination: { zh: "曼谷", en: "Bangkok" },
+      note: {
+        zh: "这次抽中曼谷：只挑一两个街区也能迅速进入状态，适合把有限时间留给夜市、按摩和好吃的。",
+        en: "This time you matched Bangkok: one or two neighborhoods are enough for markets, massages and great food on a fast escape.",
+      },
+    },
+  ],
+  food: [
+    {
+      destination: { zh: "福冈", en: "Fukuoka" },
+      note: {
+        zh: "这次抽中福冈：拉面、屋台、海鲜和咖啡集中，胃的路线不用绕远，短时间也能吃得很完整。",
+        en: "This time you matched Fukuoka: ramen, yatai, seafood and coffee sit close together, so an appetite-led route stays easy.",
+      },
+    },
+    {
+      destination: { zh: "首尔", en: "Seoul" },
+      note: {
+        zh: "这次抽中首尔：市场、烤肉、咖啡店和深夜食堂各有一条路线，很适合按街区一路吃过去。",
+        en: "This time you matched Seoul: markets, barbecue, cafés and late-night spots give every neighborhood its own food route.",
+      },
+    },
+  ],
+  budget: [
+    {
+      destination: { zh: "曼谷", en: "Bangkok" },
+      note: {
+        zh: "这次抽中曼谷：住宿和餐饮档位丰富，预算可以灵活分配，省下来的部分还能多换几顿和一次按摩。",
+        en: "This time you matched Bangkok: wide-ranging stays and food make it easy to rebalance the budget and still add another meal or massage.",
+      },
+    },
+    {
+      destination: { zh: "福冈", en: "Fukuoka" },
+      note: {
+        zh: "这次抽中福冈：城市紧凑、移动成本低，少花时间和交通费，也是一种很聪明的旅行性价比。",
+        en: "This time you matched Fukuoka: a compact city keeps transport and wasted time low, which is its own kind of smart value.",
+      },
+    },
+  ],
+  luxury: [
+    {
+      destination: { zh: "冲绳", en: "Okinawa" },
+      note: {
+        zh: "这次抽中冲绳：海景房、度假酒店和慢早晨都很对你的节奏，少排几个点反而更像真正休息。",
+        en: "This time you matched Okinawa: sea-view stays, resort mornings and fewer plans turn the trip into an actual reset.",
+      },
+    },
+    {
+      destination: { zh: "曼谷", en: "Bangkok" },
+      note: {
+        zh: "这次抽中曼谷：酒店、泳池、早餐和按摩选择很多，完全可以把住宿本身安排成假期主线。",
+        en: "This time you matched Bangkok: hotels, pools, breakfast and spa choices make the stay itself a convincing main event.",
+      },
+    },
+  ],
+  culture: [
+    {
+      destination: { zh: "京都", en: "Kyoto" },
+      note: {
+        zh: "这次抽中京都：寺院、庭园、街巷和料理都适合分区规划，路线做得越细，现场反而越从容。",
+        en: "This time you matched Kyoto: temples, gardens, lanes and food reward a carefully grouped route without making the day feel rushed.",
+      },
+    },
+    {
+      destination: { zh: "福冈", en: "Fukuoka" },
+      note: {
+        zh: "这次抽中福冈：城市尺度友好，博物馆、设计商店、海边和街区路线很容易排成一张清爽的计划表。",
+        en: "This time you matched Fukuoka: museums, design shops, the waterfront and compact neighborhoods make a clean, satisfying plan.",
+      },
+    },
+  ],
+  nature: [
+    {
+      destination: { zh: "清迈", en: "Chiang Mai" },
+      note: {
+        zh: "这次抽中清迈：山路、乡野、咖啡和慢节奏适合随时改路线，把一天交给天气和当下心情。",
+        en: "This time you matched Chiang Mai: mountain roads, countryside and a slower rhythm leave room to follow the weather and your mood.",
+      },
+    },
+    {
+      destination: { zh: "京都", en: "Kyoto" },
+      note: {
+        zh: "这次抽中京都：山边步道、庭园和安静街区能把城市与自然接在一起，不赶场也有很多风景。",
+        en: "This time you matched Kyoto: hillside walks, gardens and quiet neighborhoods connect city and nature without a packed schedule.",
+      },
+    },
+  ],
+};
+
 const defaultStoryHero = {
   src: "assets/travel-personality-hero.png",
   focus: "center",
@@ -1241,6 +740,7 @@ const aiQuestionPendingKeys = new Set();
 let currentQuestionId = startQuestionId;
 let finalPersona = null;
 let finalPersonaType = null;
+let finalDestinationVariant = null;
 let aiPersonalizedResult = null;
 let aiRequestId = 0;
 let aiQuestionRequestId = 0;
@@ -1270,6 +770,51 @@ function escapeHtml(value) {
 
 function getPersonaDisplayName(persona) {
   return persona.displayName ? localize(persona.displayName) : persona.name;
+}
+
+function getRandomIndex(length) {
+  if (length <= 1) {
+    return 0;
+  }
+
+  if (window.crypto?.getRandomValues) {
+    const randomValue = new Uint32Array(1);
+    window.crypto.getRandomValues(randomValue);
+    return randomValue[0] % length;
+  }
+
+  return Math.floor(Math.random() * length);
+}
+
+function getRandomItem(items) {
+  return items[getRandomIndex(items.length)];
+}
+
+function chooseDestinationVariant(type) {
+  const persona = personas[type];
+  const variants = [
+    { destination: persona.destination, note: persona.note },
+    ...(personaDestinationAlternatives[type] || []),
+  ];
+  const storageKey = `travel-personality:last-destination:${type}`;
+  let lastDestination = "";
+
+  try {
+    lastDestination = window.sessionStorage.getItem(storageKey) || "";
+  } catch {
+    // Some file:// or privacy modes disable session storage; randomness still works without it.
+  }
+
+  const freshVariants = variants.filter((variant) => variant.destination.en !== lastDestination);
+  const selected = getRandomItem(freshVariants.length ? freshVariants : variants);
+
+  try {
+    window.sessionStorage.setItem(storageKey, selected.destination.en);
+  } catch {
+    // Ignore unavailable storage and keep the selected local result.
+  }
+
+  return selected;
 }
 
 function localizedValue(value, lang = currentLang) {
@@ -1368,12 +913,10 @@ function sanitizeSharedMatchProfile(profile) {
   return {
     v: 1,
     type: profile.type,
-    name: String(profile.name || personas[profile.type].name).slice(0, 34),
     scores,
     answerTypes: Array.isArray(profile.answerTypes)
       ? profile.answerTypes.filter((type) => personaOrder.includes(type)).slice(0, totalQuizSteps)
       : [],
-    destination: String(profile.destination || "").slice(0, 30),
   };
 }
 
@@ -1459,7 +1002,6 @@ function calculateFriendMatch() {
 
   return {
     score,
-    friendName: sharedMatchProfile.name,
     tone: getMatchTone(score),
   };
 }
@@ -1468,10 +1010,8 @@ function buildShareProfile() {
   return {
     v: 1,
     type: finalPersonaType,
-    name: getPersonaDisplayName(finalPersona),
     scores: getScoreArray(getScoreSummary()),
     answerTypes: answers.map((answer) => answer.type),
-    destination: localize(finalPersona.destination),
   };
 }
 
@@ -1558,7 +1098,7 @@ function renderQuestion() {
   const question = getDisplayQuestion(currentQuestionId);
   const currentStep = Math.min(answers.length + 1, totalQuizSteps);
   const matchInvite = sharedMatchProfile
-    ? `<p class="match-invite">${escapeHtml(copy.matchInvite(sharedMatchProfile.name))}</p>`
+    ? `<p class="match-invite">${escapeHtml(copy.matchInvite)}</p>`
     : "";
   stepLabel.textContent = copy.step(currentStep, totalQuizSteps);
   progressFill.style.width = `${(answers.length / totalQuizSteps) * 100}%`;
@@ -1643,17 +1183,13 @@ function getPrimaryType(option) {
 
 function getResultType() {
   const counts = getScoreSummary();
-
   const priority = ["weekend", "food", "budget", "luxury", "culture", "nature"];
-  const lastPrimaryType = [...answers].reverse().find((answer) => answer.type)?.type;
-  return priority
+  const ranked = priority
     .map((type) => ({ type, count: counts[type] || 0 }))
-    .sort(
-      (a, b) =>
-        b.count - a.count ||
-        Number(b.type === lastPrimaryType) - Number(a.type === lastPrimaryType) ||
-        priority.indexOf(a.type) - priority.indexOf(b.type),
-    )[0].type;
+    .sort((a, b) => b.count - a.count || priority.indexOf(a.type) - priority.indexOf(b.type));
+  const highestScore = ranked[0].count;
+  const tiedLeaders = ranked.filter((item) => item.count === highestScore);
+  return getRandomItem(tiedLeaders).type;
 }
 
 function getScoreSummary() {
@@ -1669,18 +1205,41 @@ function showResult() {
   const type = getResultType();
   finalPersonaType = type;
   finalPersona = personas[type];
+  finalDestinationVariant = chooseDestinationVariant(type);
   aiPersonalizedResult = null;
   latestFriendMatch = calculateFriendMatch();
   renderResult();
   requestPersonalizedResult();
 }
 
-const skyscannerBaseUrls = {
-  flights: "https://www.skyscanner.com/flights",
-  flight_deals: "https://www.skyscanner.com/flights/last-minute-deals/",
-  hotels: "https://www.skyscanner.com/hotels",
-  car_hire: "https://www.skyscanner.com/car-rental",
+const skyscannerDestinationSearch = {
+  weekend: {
+    iata: "FUK",
+    hotelUrl: "https://www.skyscanner.com/hotels/japan/fukuoka-hotels/ci-27541740",
+  },
+  food: {
+    iata: "BKK",
+    hotelUrl: "https://www.skyscanner.com/hotels/thailand/bangkok-hotels/ci-27536671",
+  },
+  budget: {
+    iata: "CNX",
+    hotelUrl: "https://www.skyscanner.com/hotels/thailand/chiang-mai-hotels/ci-27539873",
+  },
+  luxury: {
+    iata: "UKY",
+    hotelUrl: "https://www.skyscanner.com/hotels/japan/kyoto-hotels/ci-27548351",
+  },
+  culture: {
+    iata: "SEL",
+    hotelUrl: "https://www.skyscanner.com/hotels/south-korea/seoul-hotels/ci-27538638",
+  },
+  nature: {
+    iata: "OKA",
+    hotelUrl: "https://www.skyscanner.com/hotels/japan/okinawa-hotels/ci-27540768",
+  },
 };
+
+const skyscannerReferralBaseUrl = "https://www.skyscanner.net/g/referrals/v1";
 
 function getSkyscannerAngleFromUrl(url) {
   if (url.includes("car-rental")) {
@@ -1720,25 +1279,32 @@ function inferSkyscannerAngleFromServices(services, fallbackAngle) {
   return fallbackAngle;
 }
 
-function getSkyscannerDestination(destination) {
-  const heroType = getKnownDestinationHeroType(destination);
-  return destinationHeroImages[heroType]?.destination.en || destination;
+function getSkyscannerSearchType(angle) {
+  return angle === "hotels" ? "hotels" : "flights";
 }
 
-function buildSkyscannerUrl(angle, destination, personaType = finalPersonaType) {
+function getSkyscannerDestinationConfig(destination) {
+  const heroType = getKnownDestinationHeroType(destination);
+  return skyscannerDestinationSearch[heroType] || null;
+}
+
+function buildSkyscannerUrl(angle, destination) {
   const resolvedAngle = angle || getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
-  const url = new URL(skyscannerBaseUrls[resolvedAngle] || finalPersona.skyscanner.url);
-  const skyscannerDestination = getSkyscannerDestination(destination).trim();
+  const searchType = getSkyscannerSearchType(resolvedAngle);
+  const destinationConfig = getSkyscannerDestinationConfig(destination);
 
-  url.searchParams.set("utm_source", "travel_personality_quiz");
-  url.searchParams.set("utm_medium", "result_card");
-  url.searchParams.set("utm_campaign", "travel_personality");
-  url.searchParams.set("utm_content", `${personaType || "result"}_${resolvedAngle}`);
-
-  if (skyscannerDestination) {
-    url.searchParams.set("destination", skyscannerDestination);
+  if (!destinationConfig) {
+    return searchType === "hotels"
+      ? "https://www.skyscanner.com/hotels"
+      : "https://www.skyscanner.com/flights";
   }
 
+  if (searchType === "hotels") {
+    return destinationConfig.hotelUrl;
+  }
+
+  const url = new URL(`${skyscannerReferralBaseUrl}/flights/cheap-flights-to`);
+  url.searchParams.set("destination", destinationConfig.iata);
   return url.toString();
 }
 
@@ -1751,10 +1317,61 @@ function normalizeList(value, fallback) {
   return cleaned.length ? cleaned : fallback;
 }
 
+function getLocalSkyscannerTitle(angle, destination) {
+  const personaName = getPersonaDisplayName(finalPersona);
+  const searchType = getSkyscannerSearchType(angle);
+  const labels = {
+    zh: {
+      flights: `看看从你附近出发去${destination}的机票`,
+      hotels: `看看${destination}的酒店`,
+    },
+    en: {
+      flights: `see flights from near you to ${destination}`,
+      hotels: `see hotels in ${destination}`,
+    },
+  };
+  return `${personaName}: ${labels[currentLang][searchType]}`;
+}
+
+function getLocalSkyscannerCopy(angle, destination) {
+  const searchType = getSkyscannerSearchType(angle);
+  const copyByAngle = {
+    zh: {
+      flights: `目的地已经填好；打开后会按你的访问地区显示出发选项，日期可以再调整。`,
+      hotels: `${destination}已经填好；打开后选择入住日期，就能查看当地酒店。`,
+    },
+    en: {
+      flights: `The destination is filled in. Open it to see departure options for your region, then adjust the dates.`,
+      hotels: `${destination} is filled in. Open it, choose your dates and browse local stays.`,
+    },
+  };
+  return copyByAngle[currentLang][searchType];
+}
+
+function getLocalSkyscannerServices(angle) {
+  const searchType = getSkyscannerSearchType(angle);
+  const services = {
+    zh: {
+      flights: ["附近出发", "目的地已填", "日期可选"],
+      hotels: ["目的地已填", "酒店", "日期可选"],
+    },
+    en: {
+      flights: ["Nearby origin", "Destination set", "Flexible dates"],
+      hotels: ["Destination set", "Hotels", "Choose dates"],
+    },
+  };
+  return services[currentLang][searchType];
+}
+
 function getResultContent() {
   const fallbackTags = finalPersona.tags[currentLang];
   const fallbackServices = finalPersona.skyscanner.services[currentLang];
-  const fallbackDestination = localize(finalPersona.destination);
+  const localVariant = finalDestinationVariant || {
+    destination: finalPersona.destination,
+    note: finalPersona.note,
+  };
+  const fallbackDestination = localize(localVariant.destination);
+  const fallbackNote = localize(localVariant.note);
   const fallbackAngle = getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
 
   if (!aiPersonalizedResult) {
@@ -1762,12 +1379,12 @@ function getResultContent() {
       name: getPersonaDisplayName(finalPersona),
       label: localize(finalPersona.label),
       destination: fallbackDestination,
-      note: localize(finalPersona.note),
+      note: fallbackNote,
       tags: fallbackTags,
       skyscannerUrl: buildSkyscannerUrl(fallbackAngle, fallbackDestination),
-      skyscannerTitle: localize(finalPersona.skyscanner.title),
-      skyscannerCopy: localize(finalPersona.skyscanner.copy),
-      skyscannerServices: fallbackServices,
+      skyscannerTitle: getLocalSkyscannerTitle(fallbackAngle, fallbackDestination),
+      skyscannerCopy: getLocalSkyscannerCopy(fallbackAngle, fallbackDestination),
+      skyscannerServices: getLocalSkyscannerServices(fallbackAngle),
       shareCaption: "",
     };
   }
@@ -1783,7 +1400,7 @@ function getResultContent() {
     name: aiPersonalizedResult.personaSubtype || getPersonaDisplayName(finalPersona),
     label: aiPersonalizedResult.vibeLine || localize(finalPersona.label),
     destination: aiDestination,
-    note: aiPersonalizedResult.resultNote || localize(finalPersona.note),
+    note: aiPersonalizedResult.resultNote || fallbackNote,
     tags: normalizeList(aiPersonalizedResult.tags, fallbackTags),
     skyscannerUrl: buildSkyscannerUrl(aiAngle, aiDestination),
     skyscannerTitle: aiPersonalizedResult.skyscannerTitle || localize(finalPersona.skyscanner.title),
@@ -1798,7 +1415,7 @@ function renderResult() {
   const result = getResultContent();
   latestFriendMatch = calculateFriendMatch();
   const resultLede = latestFriendMatch
-    ? copy.matchResultLine(latestFriendMatch.score, latestFriendMatch.tone, latestFriendMatch.friendName)
+    ? copy.matchResultLine(latestFriendMatch.score, latestFriendMatch.tone)
     : aiPersonalizedResult?.shareCaption || localize(finalPersona.vibe);
 
   progressFill.style.width = "100%";
@@ -1870,6 +1487,7 @@ function restartQuiz() {
   currentQuestionId = startQuestionId;
   finalPersona = null;
   finalPersonaType = null;
+  finalDestinationVariant = null;
   aiPersonalizedResult = null;
   latestFriendMatch = null;
   aiRequestId += 1;
@@ -1927,6 +1545,7 @@ function buildAiQuestionPayload(questionId) {
         title: localize(option.title),
         copy: localize(option.copy),
         primaryType: getPrimaryType(option),
+        scoreIntent: option.score,
       })),
     },
     answers: answers.map((answer, index) => ({
@@ -1984,7 +1603,7 @@ function isValidAiResult(result) {
 }
 
 function shouldRequestAiPersonalization() {
-  return !window.location.hostname.endsWith("github.io");
+  return enableAiPersonalization;
 }
 
 function shouldRequestPersonalizedResult() {
@@ -2091,10 +1710,8 @@ function getShareText() {
     return copy.shareFallback;
   }
 
-  const result = getResultContent();
-  const caption = result.shareCaption ? `${result.shareCaption}\n` : "";
   const shareUrl = getMatchShareUrl();
-  return `${caption}${copy.shareTitle} "${result.name} — ${result.label}"\n${copy.shareDestination}: ${result.destination}\n${result.note}\n${copy.shareInvite}\n${shareUrl}\n${result.skyscannerTitle}: ${result.skyscannerUrl}\n${copy.shareTags}`;
+  return `${copy.shareInvite}\n${shareUrl}`;
 }
 
 async function copyShareText() {
@@ -2207,7 +1824,7 @@ async function createResultCardBlob() {
 
   ctx.fillStyle = "#004f9f";
   ctx.font = "900 34px system-ui, sans-serif";
-  wrapCanvasText(ctx, `Skyscanner: ${result.skyscannerTitle}`, 150, 1184, 780, 46);
+  wrapCanvasText(ctx, copy.posterReaction, 150, 1184, 780, 46);
 
   ctx.fillStyle = "#05203c";
   ctx.font = "800 32px system-ui, sans-serif";
@@ -2311,6 +1928,7 @@ backButton.addEventListener("click", () => {
     currentQuestionId = previousAnswer.questionId;
     finalPersona = null;
     finalPersonaType = null;
+    finalDestinationVariant = null;
     aiPersonalizedResult = null;
     latestFriendMatch = null;
     aiRequestId += 1;
