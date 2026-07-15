@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Travel Personality</title>
+  <rect width="512" height="512" rx="112" fill="#061f3a"/>
+  <path d="M84 133c75-54 158-57 235-7 40 26 69 66 106 67" fill="none" stroke="#07b5a5" stroke-width="25" stroke-linecap="round" stroke-dasharray="10 39"/>
+  <circle cx="87" cy="134" r="25" fill="#ff5b4b" stroke="#fff" stroke-width="14"/>
+  <path d="M425 194c0 39-48 90-48 90s-48-51-48-90a48 48 0 1 1 96 0Z" fill="#0876e1" stroke="#fff" stroke-width="14"/>
+  <circle cx="377" cy="194" r="15" fill="#fff"/>
+  <text x="256" y="378" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="202" font-weight="900" letter-spacing="-18" text-anchor="middle">TP</text>
+</svg>

@@ -231,7 +231,7 @@ h1 {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.service-strip span {
+.service-strip a {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
@@ -243,9 +243,10 @@ h1 {
   font-weight: 950;
 }
 
-.service-strip span:first-child {
-  background: var(--brand-blue);
-  color: var(--paper);
+.service-strip a:hover,
+.service-strip a:focus-visible {
+  outline: 3px solid rgba(0, 166, 152, 0.42);
+  transform: translateY(-1px);
 }
 
 .quiz-card,
@@ -567,6 +568,51 @@ h1 {
   font-weight: 900;
 }
 
+.match-reasons {
+  display: grid;
+  gap: 10px;
+  padding: 15px 16px;
+  border: 1px solid rgba(0, 111, 103, 0.18);
+  border-radius: 8px;
+  background: #f0faf8;
+}
+
+.match-reasons[hidden] {
+  display: none;
+}
+
+.match-reasons > strong {
+  color: #006f67;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.match-reasons ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-reasons li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.42;
+}
+
+.match-reasons li::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #00a698;
+  content: "✓";
+  font-weight: 950;
+}
+
 .skyscanner-card {
   display: grid;
   gap: 7px;
@@ -576,12 +622,6 @@ h1 {
   background: var(--brand-blue);
   color: var(--paper);
   box-shadow: 0 14px 30px rgba(7, 112, 227, 0.24);
-}
-
-.skyscanner-card:hover,
-.skyscanner-card:focus-visible {
-  outline: 3px solid rgba(0, 166, 152, 0.24);
-  transform: translateY(-1px);
 }
 
 .skyscanner-label {
@@ -610,16 +650,28 @@ h1 {
   margin-top: 3px;
 }
 
-.skyscanner-services span {
+.skyscanner-services a {
   display: inline-flex;
   min-height: 28px;
   align-items: center;
+  gap: 4px;
   border-radius: 999px;
   padding: 4px 10px;
   background: var(--paper);
   color: var(--brand-blue-dark);
   font-size: 0.76rem;
   font-weight: 950;
+}
+
+.skyscanner-services a:hover,
+.skyscanner-services a:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.38);
+  background: #e7f2ff;
+  transform: translateY(-1px);
+}
+
+.skyscanner-services a span {
+  font-size: 0.72em;
 }
 
 .score-stamp {
@@ -829,7 +881,7 @@ h1 {
     margin-top: 20px;
   }
 
-  .service-strip span {
+  .service-strip a {
     justify-content: center;
     min-width: 0;
     padding-inline: 10px;
@@ -915,7 +967,7 @@ h1 {
     font-size: 2.32rem;
   }
 
-  .service-strip span {
+  .service-strip a {
     min-height: 34px;
     padding-inline: 8px;
     font-size: 0.82rem;
@@ -966,7 +1018,8 @@ h1 {
   .option-button,
   .primary-button,
   .ghost-button,
-  .skyscanner-card {
+  .service-strip a,
+  .skyscanner-services a {
     transition:
       transform 180ms ease,
       box-shadow 180ms ease,

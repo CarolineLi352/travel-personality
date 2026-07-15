@@ -33,10 +33,13 @@ const resultEls = {
   destination: document.querySelector("#destinationName"),
   tags: document.querySelector("#tagRow"),
   note: document.querySelector("#resultNote"),
+  matchReasons: document.querySelector("#matchReasons"),
+  matchReasonsTitle: document.querySelector("#matchReasonsTitle"),
+  matchReasonsList: document.querySelector("#matchReasonsList"),
   scoreLink: document.querySelector("#matchShareLink"),
   score: document.querySelector("#scoreValue"),
   scoreLabel: document.querySelector("#scoreLabel"),
-  skyscannerLink: document.querySelector("#skyscannerLink"),
+  skyscannerCard: document.querySelector("#skyscannerCard"),
   skyscannerTitle: document.querySelector("#skyscannerTitle"),
   skyscannerCopy: document.querySelector("#skyscannerCopy"),
   skyscannerServices: document.querySelector("#skyscannerServices"),
@@ -44,7 +47,7 @@ const resultEls = {
 
 const uiCopy = {
   zh: {
-    pageTitle: "Travel Personality | 旅行人格测试",
+    pageTitle: "旅行人格测试｜测出你的旅行方式与下一站",
     brandText: "旅行人格测试",
     topbarNote: "测出你的下一站",
     heroEyebrow: "Powered by your travel vibe",
@@ -66,6 +69,7 @@ const uiCopy = {
     download: "保存结果卡",
     storyKicker: "我的旅行人格",
     destinationLabel: "推荐目的地",
+    matchReasonsTitle: "为什么推荐这里",
     skyscannerLabel: "Skyscanner 灵感站",
     defaultName: "还没揭晓",
     defaultVibe: "答题后生成你的专属结果卡。",
@@ -89,9 +93,6 @@ const uiCopy = {
     saveCancelled: "已取消保存。需要的话可以再点一次保存结果卡。",
     saveFailed: "结果卡生成失败，可以先截图保存当前结果卡。",
     downloadDone: "结果卡已生成；如果没有弹出相册选项，图片会在浏览器下载里。",
-    aiLoading: "AI 正在把结果改得更像你...",
-    aiReady: "AI 个性化结果已生成。",
-    aiFallback: "结果卡已生成，看看你的下一站是不是很对味。",
     shareFallback: "我刚在测旅行人格，想看看会抽到哪座城市。",
     shareInviteVariants: [
       "我刚做完一个旅行搭子测试。轮到你了，看看我们一起出发会有多合拍：",
@@ -109,7 +110,7 @@ const uiCopy = {
     posterQrLabel: "扫码测搭子",
   },
   en: {
-    pageTitle: "Travel Personality | Find Your Travel Type",
+    pageTitle: "Travel Personality | Find Your Travel Type and Next Destination",
     brandText: "Travel Personality",
     topbarNote: "Find your next trip",
     heroEyebrow: "Powered by your travel vibe",
@@ -131,6 +132,7 @@ const uiCopy = {
     download: "Save card",
     storyKicker: "My travel type",
     destinationLabel: "Matched destination",
+    matchReasonsTitle: "Why this destination",
     skyscannerLabel: "Skyscanner trip ideas",
     defaultName: "Not revealed yet",
     defaultVibe: "Answer the quiz to get your shareable result card.",
@@ -154,9 +156,6 @@ const uiCopy = {
     saveCancelled: "Save cancelled. Tap Save card again when you are ready.",
     saveFailed: "Could not create the card. You can still screenshot the result card.",
     downloadDone: "Your card is ready. If no photo option appeared, check your browser downloads.",
-    aiLoading: "AI is personalizing your result...",
-    aiReady: "AI-personalized result ready.",
-    aiFallback: "Your result card is ready. See if the next trip fits your vibe.",
     shareFallback: "I just took a travel personality quiz to see which city I would draw.",
     shareInviteVariants: [
       "I just took a travel-duo test. Your turn — let's see how well we would travel together:",
@@ -177,7 +176,6 @@ const uiCopy = {
 
 const totalQuizSteps = 7;
 const startQuestionId = "tripSpark";
-const enableAiPersonalization = false;
 const personaOrder = ["weekend", "food", "budget", "luxury", "culture", "nature"];
 const personaCompatibility = {
   "budget-weekend": 0.78,
@@ -776,63 +774,151 @@ const defaultPersonaImage = {
 };
 
 const destinationHeroImages = {
-  weekend: {
+  fukuoka: {
     src: "assets/destinations/fukuoka.jpg",
-    focus: "center 58%",
+    focus: "center",
     destination: { zh: "福冈", en: "Fukuoka" },
-    alt: { zh: "轻松短途城市旅行氛围照片", en: "Easy short city-break travel photo" },
+    alt: { zh: "福冈海滨城市与港湾的自然旅行照片", en: "Natural travel photo of Fukuoka's waterfront and harbor" },
   },
-  food: {
+  taipei: {
+    src: "assets/destinations/taipei.jpg",
+    focus: "center",
+    destination: { zh: "台北", en: "Taipei" },
+    alt: { zh: "雨后台北街区、寺庙屋顶与山景照片", en: "Rainy Taipei neighborhood with a temple roof and green hills" },
+  },
+  singapore: {
+    src: "assets/destinations/singapore.jpg",
+    focus: "center",
+    destination: { zh: "新加坡", en: "Singapore" },
+    alt: { zh: "新加坡雨后水岸步道与花园城市照片", en: "Rain-fresh waterfront path in garden-city Singapore" },
+  },
+  bangkok: {
     src: "assets/destinations/bangkok.jpg",
-    focus: "center 55%",
+    focus: "center",
     destination: { zh: "曼谷", en: "Bangkok" },
-    alt: { zh: "夜市和街头美食旅行氛围照片", en: "Night market and street-food travel photo" },
+    alt: { zh: "曼谷黄昏社区小吃街的自然旅行照片", en: "Natural dusk travel photo of a Bangkok neighborhood food street" },
   },
-  budget: {
+  mexicoCity: {
+    src: "assets/destinations/mexico-city.jpg",
+    focus: "center",
+    destination: { zh: "墨西哥城", en: "Mexico City" },
+    alt: { zh: "墨西哥城绿荫住宅街的自然旅行照片", en: "Natural travel photo of a leafy Mexico City residential street" },
+  },
+  bologna: {
+    src: "assets/destinations/bologna.jpg",
+    focus: "center",
+    destination: { zh: "博洛尼亚", en: "Bologna" },
+    alt: { zh: "博洛尼亚红砖拱廊与自行车街景照片", en: "Bologna street with terracotta porticoes and bicycles" },
+  },
+  chiangMai: {
     src: "assets/destinations/chiang-mai.jpg",
-    focus: "center 54%",
+    focus: "center",
     destination: { zh: "清迈", en: "Chiang Mai" },
-    alt: { zh: "高性价比慢旅行氛围照片", en: "Good-value slow-travel photo" },
+    alt: { zh: "清迈雨后古城小路、寺庙与山景照片", en: "Rain-fresh Chiang Mai lane with a temple roof and hills" },
   },
-  luxury: {
+  hanoi: {
+    src: "assets/destinations/hanoi.jpg",
+    focus: "center",
+    destination: { zh: "河内", en: "Hanoi" },
+    alt: { zh: "河内雨后树荫街区的自然旅行照片", en: "Natural travel photo of a tree-lined Hanoi street after rain" },
+  },
+  tbilisi: {
+    src: "assets/destinations/tbilisi.jpg",
+    focus: "center",
+    destination: { zh: "第比利斯", en: "Tbilisi" },
+    alt: { zh: "第比利斯山城老街与木阳台照片", en: "Tbilisi hillside old street with wooden balconies" },
+  },
+  kyoto: {
     src: "assets/destinations/kyoto.jpg",
-    focus: "center 56%",
+    focus: "center",
     destination: { zh: "京都", en: "Kyoto" },
-    alt: { zh: "庭园和舒适住宿旅行氛围照片", en: "Garden and comfortable-stay travel photo" },
+    alt: { zh: "京都雨后町屋小路的自然旅行照片", en: "Natural travel photo of a Kyoto machiya lane after rain" },
   },
-  culture: {
+  bali: {
+    src: "assets/destinations/bali.jpg",
+    focus: "center",
+    destination: { zh: "巴厘岛", en: "Bali" },
+    alt: { zh: "巴厘岛村庄小路与稻田晨景照片", en: "Morning view of a Bali village lane and working rice fields" },
+  },
+  marrakech: {
+    src: "assets/destinations/marrakech.jpg",
+    focus: "center",
+    destination: { zh: "马拉喀什", en: "Marrakech" },
+    alt: { zh: "马拉喀什老城巷道与远山照片", en: "Marrakech medina lane with rooftops and distant mountains" },
+  },
+  seoul: {
     src: "assets/destinations/seoul.jpg",
-    focus: "center 54%",
+    focus: "center",
     destination: { zh: "首尔", en: "Seoul" },
-    alt: { zh: "城市天际线和文化街区旅行照片", en: "Skyline and cultural-neighborhood travel photo" },
+    alt: { zh: "首尔山坡社区与城市天际线照片", en: "Seoul hillside neighborhoods and city skyline" },
   },
-  nature: {
+  paris: {
+    src: "assets/destinations/paris.jpg",
+    focus: "center",
+    destination: { zh: "巴黎", en: "Paris" },
+    alt: { zh: "雨后巴黎街区与奥斯曼建筑照片", en: "Paris neighborhood with Haussmann buildings after rain" },
+  },
+  istanbul: {
+    src: "assets/destinations/istanbul.jpg",
+    focus: "center",
+    destination: { zh: "伊斯坦布尔", en: "Istanbul" },
+    alt: { zh: "伊斯坦布尔海峡渡轮与城市天际线照片", en: "Bosphorus ferry and layered Istanbul skyline" },
+  },
+  okinawa: {
     src: "assets/destinations/okinawa.jpg",
-    focus: "center 57%",
+    focus: "center",
     destination: { zh: "冲绳", en: "Okinawa" },
-    alt: { zh: "海岸和自驾公路旅行氛围照片", en: "Coast and road-trip travel photo" },
+    alt: { zh: "冲绳海岸公路与岛屿海景照片", en: "Okinawa coastal road and island seascape" },
+  },
+  queenstown: {
+    src: "assets/destinations/queenstown.jpg",
+    focus: "center",
+    destination: { zh: "皇后镇", en: "Queenstown" },
+    alt: { zh: "皇后镇湖岸、城镇与山景照片", en: "Queenstown waterfront, town edge and mountain landscape" },
+  },
+  reykjavik: {
+    src: "assets/destinations/reykjavik.jpg",
+    focus: "center",
+    destination: { zh: "雷克雅未克", en: "Reykjavik" },
+    alt: { zh: "雷克雅未克彩色街区、港口与远山照片", en: "Reykjavik neighborhood, harbor and distant mountains" },
   },
 };
 
 const destinationHeroKeywords = [
-  { type: "weekend", keywords: ["福冈", "fukuoka", "台北", "taipei", "新加坡", "singapore"] },
-  { type: "food", keywords: ["曼谷", "bangkok", "墨西哥城", "mexicocity", "博洛尼亚", "bologna"] },
-  { type: "budget", keywords: ["清迈", "chiangmai", "河内", "hanoi", "第比利斯", "tbilisi"] },
-  { type: "luxury", keywords: ["京都", "kyoto", "巴厘岛", "bali", "马拉喀什", "marrakech"] },
-  { type: "culture", keywords: ["首尔", "seoul", "巴黎", "paris", "伊斯坦布尔", "istanbul"] },
-  { type: "nature", keywords: ["冲绳", "okinawa", "皇后镇", "queenstown", "雷克雅未克", "reykjavik"] },
+  { type: "fukuoka", keywords: ["福冈", "fukuoka"] },
+  { type: "taipei", keywords: ["台北", "taipei"] },
+  { type: "singapore", keywords: ["新加坡", "singapore"] },
+  { type: "bangkok", keywords: ["曼谷", "bangkok"] },
+  { type: "mexicoCity", keywords: ["墨西哥城", "mexicocity"] },
+  { type: "bologna", keywords: ["博洛尼亚", "bologna"] },
+  { type: "chiangMai", keywords: ["清迈", "chiangmai"] },
+  { type: "hanoi", keywords: ["河内", "hanoi"] },
+  { type: "tbilisi", keywords: ["第比利斯", "tbilisi"] },
+  { type: "kyoto", keywords: ["京都", "kyoto"] },
+  { type: "bali", keywords: ["巴厘岛", "bali"] },
+  { type: "marrakech", keywords: ["马拉喀什", "marrakech"] },
+  { type: "seoul", keywords: ["首尔", "seoul"] },
+  { type: "paris", keywords: ["巴黎", "paris"] },
+  { type: "istanbul", keywords: ["伊斯坦布尔", "istanbul"] },
+  { type: "okinawa", keywords: ["冲绳", "okinawa"] },
+  { type: "queenstown", keywords: ["皇后镇", "queenstown"] },
+  { type: "reykjavik", keywords: ["雷克雅未克", "reykjavik"] },
 ];
 
+const personaDefaultDestinationHero = {
+  weekend: "fukuoka",
+  food: "bangkok",
+  budget: "chiangMai",
+  luxury: "kyoto",
+  culture: "seoul",
+  nature: "okinawa",
+};
+
 const answers = [];
-const personalizedQuestions = new Map();
-const aiQuestionPendingKeys = new Set();
 let currentQuestionId = startQuestionId;
 let finalPersona = null;
 let finalPersonaType = null;
 let finalDestinationVariant = null;
-let aiPersonalizedResult = null;
-let aiRequestId = 0;
-let aiQuestionRequestId = 0;
 let currentLang = "zh";
 let sharedMatchProfile = null;
 let latestFriendMatch = null;
@@ -909,87 +995,11 @@ function chooseDestinationVariant(type) {
     .sort((a, b) => b.score - a.score);
   const bestScore = rankedVariants[0].score;
   const bestVariants = rankedVariants.filter(({ score }) => score === bestScore).map(({ variant }) => variant);
-  const storageKey = `travel-personality:last-destination:${type}`;
-  let lastDestination = "";
-
-  try {
-    lastDestination = window.sessionStorage.getItem(storageKey) || "";
-  } catch {
-    // Some file:// or privacy modes disable session storage; randomness still works without it.
-  }
-
-  const freshVariants = bestVariants.filter((variant) => variant.destination.en !== lastDestination);
-  const selected = getRandomItem(freshVariants.length ? freshVariants : bestVariants);
-
-  try {
-    window.sessionStorage.setItem(storageKey, selected.destination.en);
-  } catch {
-    // Ignore unavailable storage and keep the selected local result.
-  }
-
-  return selected;
-}
-
-function localizedValue(value, lang = currentLang) {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return value[lang];
-}
-
-function trimAiText(value, fallback, maxLength) {
-  const text = typeof value === "string" ? value.trim() : "";
-  return (text || fallback).slice(0, maxLength);
-}
-
-function getQuestionPersonalizationKey(questionId = currentQuestionId) {
-  const history = answers.map((answer) => `${answer.questionId}:${answer.optionLetter}`).join("|");
-  return `${currentLang}:${questionId}:${history}`;
-}
-
-function normalizeAiQuestionResult(result, baseQuestion) {
-  if (!isValidAiQuestionResult(result, baseQuestion)) {
-    return null;
-  }
-
-  return {
-    label: trimAiText(result.label, localize(baseQuestion.label), currentLang === "zh" ? 8 : 18),
-    title: trimAiText(result.title, localize(baseQuestion.title), currentLang === "zh" ? 34 : 86),
-    options: baseQuestion.options.map((option, index) => {
-      const aiOption = result.options[index];
-      return {
-        ...option,
-        title: trimAiText(aiOption.title, localize(option.title), currentLang === "zh" ? 22 : 54),
-        copy: trimAiText(aiOption.copy, localize(option.copy), currentLang === "zh" ? 34 : 86),
-      };
-    }),
-  };
-}
-
-function getDisplayQuestion(questionId = currentQuestionId) {
-  const baseQuestion = questionBank[questionId];
-  const personalized = personalizedQuestions.get(getQuestionPersonalizationKey(questionId));
-
-  if (!personalized) {
-    return baseQuestion;
-  }
-
-  return {
-    ...baseQuestion,
-    label: personalized.label,
-    title: personalized.title,
-    options: personalized.options,
-  };
-}
-
-function invalidateQuestionPersonalization(clearCache = false) {
-  aiQuestionRequestId += 1;
-  aiQuestionPendingKeys.clear();
-
-  if (clearCache) {
-    personalizedQuestions.clear();
-  }
+  const answerSignature = answers
+    .map((answer) => `${answer.questionId}:${answer.type}:${JSON.stringify(answer.score)}`)
+    .join("|");
+  const scoreSignature = personaOrder.map((signal) => scoreSummary[signal] || 0).join("-");
+  return getStableVariant(bestVariants, `${type}:${scoreSignature}:${answerSignature}`);
 }
 
 function encodeMatchPayload(profile) {
@@ -1210,7 +1220,7 @@ function getKnownDestinationHeroType(destination) {
 }
 
 function getDestinationHeroType(destination) {
-  return getKnownDestinationHeroType(destination) || finalPersonaType;
+  return getKnownDestinationHeroType(destination) || personaDefaultDestinationHero[finalPersonaType];
 }
 
 function getStoryHeroForResult(result) {
@@ -1235,12 +1245,6 @@ function setStoryHero(hero) {
   resultEls.hero.style.objectPosition = storyHero.focus;
 }
 
-function getDestinationPhotoLibrary() {
-  return Object.values(personaDestinationAlternatives)
-    .flat()
-    .map(({ destination }) => ({ zh: destination.zh, en: destination.en }));
-}
-
 function renderStaticCopy() {
   const copy = uiCopy[currentLang];
   document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
@@ -1253,6 +1257,10 @@ function renderStaticCopy() {
   staticEls.serviceFlights.textContent = copy.serviceFlights;
   staticEls.serviceHotels.textContent = copy.serviceHotels;
   staticEls.serviceCars.textContent = copy.serviceCars;
+  const serviceHomeLinks = buildSkyscannerServiceLinks("");
+  staticEls.serviceFlights.href = serviceHomeLinks[0].url;
+  staticEls.serviceHotels.href = serviceHomeLinks[1].url;
+  staticEls.serviceCars.href = serviceHomeLinks[2].url;
   staticEls.storyKicker.textContent = copy.storyKicker;
   staticEls.destinationLabel.textContent = copy.destinationLabel;
   staticEls.skyscannerLabel.textContent = copy.skyscannerLabel;
@@ -1268,7 +1276,7 @@ function renderStaticCopy() {
 
 function renderQuestion() {
   const copy = uiCopy[currentLang];
-  const question = getDisplayQuestion(currentQuestionId);
+  const question = questionBank[currentQuestionId];
   const currentStep = Math.min(answers.length + 1, totalQuizSteps);
   const matchInvite = sharedMatchProfile
     ? `<p class="match-invite">${escapeHtml(copy.matchInvite)}</p>`
@@ -1303,26 +1311,16 @@ function renderQuestion() {
   questionPanel.querySelectorAll(".option-button").forEach((button) => {
     button.addEventListener("click", () => chooseAnswer(Number(button.dataset.optionIndex)));
   });
-
-  requestPersonalizedQuestion(currentQuestionId);
 }
 
 function chooseAnswer(optionIndex) {
-  const baseQuestion = questionBank[currentQuestionId];
-  const displayQuestion = getDisplayQuestion(currentQuestionId);
-  const option = baseQuestion.options[optionIndex];
-  const displayOption = displayQuestion.options[optionIndex] || option;
+  const question = questionBank[currentQuestionId];
+  const option = question.options[optionIndex];
   answers.push({
     questionId: currentQuestionId,
-    questionLabel: displayQuestion.label,
-    questionTitle: displayQuestion.title,
-    optionLetter: option.letter,
-    optionTitle: displayOption.title,
-    optionCopy: displayOption.copy,
     type: getPrimaryType(option),
     score: getOptionScore(option),
   });
-  invalidateQuestionPersonalization();
 
   if (answers.length >= totalQuizSteps || !option.next) {
     showResult();
@@ -1379,13 +1377,25 @@ function showResult() {
   finalPersonaType = type;
   finalPersona = personas[type];
   finalDestinationVariant = chooseDestinationVariant(type);
-  aiPersonalizedResult = null;
   latestFriendMatch = calculateFriendMatch();
   renderResult();
-  requestPersonalizedResult();
 }
 
 const skyscannerReferralBaseUrl = "https://www.skyscanner.net/g/referrals/v1";
+const skyscannerChineseLocale = {
+  market: "CN",
+  locale: "zh-CN",
+  currency: "CNY",
+};
+
+function localizeSkyscannerUrl(url) {
+  if (currentLang === "zh") {
+    Object.entries(skyscannerChineseLocale).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+  }
+  return url.toString();
+}
 
 function getSkyscannerAngleFromUrl(url) {
   if (url.includes("car-rental")) {
@@ -1401,32 +1411,6 @@ function getSkyscannerAngleFromUrl(url) {
   }
 
   return "flights";
-}
-
-function inferSkyscannerAngleFromServices(services, fallbackAngle) {
-  const serviceText = services.join(" ").toLowerCase();
-
-  if (/租车|car hire|car rental/.test(serviceText)) {
-    return "car_hire";
-  }
-
-  if (/酒店|住宿|hotel|hotels|stay|stays|apartment/.test(serviceText)) {
-    return "hotels";
-  }
-
-  if (/便宜|低价|捡漏|deal|deals|cheap|last-minute|flexible/.test(serviceText)) {
-    return "flight_deals";
-  }
-
-  if (/机票|航班|flight|flights/.test(serviceText)) {
-    return "flights";
-  }
-
-  return fallbackAngle;
-}
-
-function getSkyscannerSearchType(angle) {
-  return angle === "hotels" ? "hotels" : "flights";
 }
 
 function getSkyscannerDestinationConfig(destination) {
@@ -1445,54 +1429,81 @@ function getSkyscannerDestinationConfig(destination) {
 
   return {
     iata: variant.search.iata,
-    hotelUrl: `https://www.skyscanner.com/hotels/search?destination=${encodeURIComponent(variant.search.hotelQuery)}`,
   };
 }
 
-function buildSkyscannerUrl(angle, destination) {
-  const resolvedAngle = angle || getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
-  const searchType = getSkyscannerSearchType(resolvedAngle);
-  const destinationConfig = getSkyscannerDestinationConfig(destination);
-
-  if (!destinationConfig) {
-    return searchType === "hotels"
-      ? "https://www.skyscanner.com/hotels"
-      : "https://www.skyscanner.com/flights";
-  }
-
-  if (searchType === "hotels") {
-    return destinationConfig.hotelUrl;
-  }
-
-  const url = new URL(`${skyscannerReferralBaseUrl}/flights/cheap-flights-to`);
-  url.searchParams.set("destination", destinationConfig.iata);
-  return url.toString();
+function getFutureTravelDateTime(daysFromNow) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + daysFromNow);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T10:00`;
 }
 
-function normalizeList(value, fallback) {
-  if (!Array.isArray(value)) {
-    return fallback;
+function buildSkyscannerServiceLinks(destination) {
+  const destinationConfig = getSkyscannerDestinationConfig(destination);
+  const labels = {
+    zh: { flights: "机票", hotels: "酒店", cars: "租车" },
+    en: { flights: "Flights", hotels: "Hotels", cars: "Car hire" },
+  }[currentLang];
+
+  if (!destinationConfig) {
+    if (currentLang === "zh") {
+      return [
+        { type: "flights", label: labels.flights, url: localizeSkyscannerUrl(new URL(`${skyscannerReferralBaseUrl}/flights/home`)) },
+        { type: "hotels", label: labels.hotels, url: localizeSkyscannerUrl(new URL(`${skyscannerReferralBaseUrl}/hotels/home-view`)) },
+        { type: "cars", label: labels.cars, url: localizeSkyscannerUrl(new URL(`${skyscannerReferralBaseUrl}/cars/home`)) },
+      ];
+    }
+
+    return [
+      { type: "flights", label: labels.flights, url: "https://www.skyscanner.com/flights" },
+      { type: "hotels", label: labels.hotels, url: "https://www.skyscanner.com/hotels" },
+      { type: "cars", label: labels.cars, url: "https://www.skyscanner.com/car-rental" },
+    ];
   }
 
-  const cleaned = value.map((item) => String(item).trim()).filter(Boolean).slice(0, 3);
-  return cleaned.length ? cleaned : fallback;
+  const flightUrl = new URL(`${skyscannerReferralBaseUrl}/flights/cheap-flights-to`);
+  flightUrl.searchParams.set("destination", destinationConfig.iata);
+
+  const hotelUrl = new URL(`${skyscannerReferralBaseUrl}/hotels/home-view`);
+  hotelUrl.searchParams.set("skyscanner_node_code", destinationConfig.iata);
+
+  const carUrl = new URL(`${skyscannerReferralBaseUrl}/cars/day-view`);
+  carUrl.searchParams.set("pickupPlace", destinationConfig.iata);
+  carUrl.searchParams.set("dropoffPlace", destinationConfig.iata);
+  carUrl.searchParams.set("pickupTime", getFutureTravelDateTime(14));
+  carUrl.searchParams.set("dropoffTime", getFutureTravelDateTime(18));
+  carUrl.searchParams.set("driverAge", "30");
+
+  return [
+    { type: "flights", label: labels.flights, url: localizeSkyscannerUrl(flightUrl) },
+    { type: "hotels", label: labels.hotels, url: localizeSkyscannerUrl(hotelUrl) },
+    { type: "cars", label: labels.cars, url: localizeSkyscannerUrl(carUrl) },
+  ];
 }
 
 function getLocalSkyscannerTitle(angle, destination) {
-  const searchType = getSkyscannerSearchType(angle);
   if (currentLang === "zh") {
-    return searchType === "hotels"
-      ? `下一站在${destination}，看看住哪里`
-      : `下一站在${destination}，看看怎么抵达`;
+    if (angle === "hotels") {
+      return `下一站在${destination}，看看住哪里`;
+    }
+    if (angle === "car_hire") {
+      return `下一站在${destination}，看看怎么开`;
+    }
+    return `下一站在${destination}，看看怎么抵达`;
   }
 
-  return searchType === "hotels"
-    ? `Next stop: ${destination}. See where to stay.`
-    : `Next stop: ${destination}. See how to get there.`;
+  if (angle === "hotels") {
+    return `Next stop: ${destination}. See where to stay.`;
+  }
+  if (angle === "car_hire") {
+    return `Next stop: ${destination}. See what to drive.`;
+  }
+  return `Next stop: ${destination}. See how to get there.`;
 }
 
 function getLocalSkyscannerCopy(angle, destination) {
-  const searchType = getSkyscannerSearchType(angle);
+  const searchType = angle === "hotels" ? "hotels" : angle === "car_hire" ? "cars" : "flights";
   const copyByAngle = {
     zh: {
       flights: {
@@ -1504,6 +1515,9 @@ function getLocalSkyscannerCopy(angle, destination) {
       hotels: {
         luxury: [`不同日期和住宿可以一起比较。先找到一间让你愿意早点回去的房间。`, `看看${destination}有哪些值得赖床的住处，其他安排可以围绕它慢慢长出来。`],
         culture: [`看看${destination}不同街区的住宿选择。住对地方，临时多看一个展也不用重新计算全城交通。`, `先选一个每天都方便出门的落脚点，把现场的时间留给真正想看的东西。`],
+      },
+      cars: {
+        nature: [`先比较${destination}的租车选择。取还车时间已经预填，车型、日期和驾驶人信息都可以继续调整。`, `把车先看起来，海岸、山路和临时想停的地方，就不用急着写进固定行程。`],
       },
     },
     en: {
@@ -1517,6 +1531,9 @@ function getLocalSkyscannerCopy(angle, destination) {
         luxury: [`Compare dates and stays, then find a room worth coming back to early.`, `See which ${destination} stays make sleeping in feel like part of the trip.`],
         culture: [`Compare stays across ${destination}. The right neighborhood makes one more exhibition much easier to add.`, `Choose a base that is easy to leave each morning, then save your time for what you came to see.`],
       },
+      cars: {
+        nature: [`Compare car hire in ${destination}. Pick-up and drop-off times are prefilled, and every detail remains adjustable.`, `Start with the car, then leave the coast, mountain roads and unplanned stops open.`],
+      },
     },
   };
   const variants = copyByAngle[currentLang][searchType][finalPersonaType] || [
@@ -1527,72 +1544,83 @@ function getLocalSkyscannerCopy(angle, destination) {
   return getStableVariant(variants, `${destination}:${currentLang}:copy`);
 }
 
-function getLocalSkyscannerServices(angle) {
-  const services = {
+function getDestinationMatchReasons(localVariant, destination) {
+  const scoreSummary = getScoreSummary();
+  const copy = {
     zh: {
-      weekend: ["周末出发", "航班比较", "日期灵活"],
-      food: ["飞去开吃", "航班比较", "日期灵活"],
-      budget: ["聪明比价", "灵活日期", "总价意识"],
-      luxury: ["住得舒服", "酒店比较", "慢慢选日期"],
-      culture: ["选对街区", "酒店位置", "路线友好"],
-      nature: ["航班比较", "抵达方式", "行程自定"],
+      persona: {
+        weekend: "你的主倾向是短途、低摩擦和快速出发。",
+        food: "你的主倾向是让吃喝体验决定旅行路线。",
+        budget: "你的主倾向是比较价格并看重整体性价比。",
+        luxury: "你的主倾向是住宿舒适度和真正放松。",
+        culture: "你的主倾向是文化内容、街区与路线规划。",
+        nature: "你的主倾向是自然风景、自由移动和行程留白。",
+      },
+      signal: {
+        weekend: `你也偏向短途效率，${destination}因此获得额外权重。`,
+        food: `你也把美食放在前面，${destination}因此获得额外权重。`,
+        budget: `你也在意预算是否花得值，${destination}因此获得额外权重。`,
+        luxury: `你也重视住宿和舒适度，${destination}因此获得额外权重。`,
+        culture: `你也偏爱文化内容和清晰路线，${destination}因此获得额外权重。`,
+        nature: `你也需要自然、自由和留白，${destination}因此获得额外权重。`,
+      },
+      balanced: "你的次级偏好比较均衡，系统使用完整答题路径进行稳定排序。",
+      ranking: `综合 7 道答案后，${destination}在同人格的 3 个候选地中排名最高。`,
     },
     en: {
-      weekend: ["Weekend escape", "Compare flights", "Flexible dates"],
-      food: ["Fly for food", "Compare flights", "Flexible dates"],
-      budget: ["Compare smarter", "Flexible dates", "Total trip value"],
-      luxury: ["Stay well", "Compare hotels", "Choose dates"],
-      culture: ["Right neighborhood", "Hotel location", "Route friendly"],
-      nature: ["Compare flights", "Ways to arrive", "Plan it your way"],
+      persona: {
+        weekend: "Your strongest signal is a short, low-friction trip that is easy to start.",
+        food: "Your strongest signal is letting food shape the route.",
+        budget: "Your strongest signal is comparing options and protecting total trip value.",
+        luxury: "Your strongest signal is comfort, a good stay and genuine downtime.",
+        culture: "Your strongest signal is culture, neighborhoods and a well-built route.",
+        nature: "Your strongest signal is nature, freedom of movement and room to improvise.",
+      },
+      signal: {
+        weekend: `You also value short-trip efficiency, which gives ${destination} extra weight.`,
+        food: `You also put food high on the list, which gives ${destination} extra weight.`,
+        budget: `You also care about overall value, which gives ${destination} extra weight.`,
+        luxury: `You also value comfort and the stay itself, which gives ${destination} extra weight.`,
+        culture: `You also favor culture and clear routes, which gives ${destination} extra weight.`,
+        nature: `You also need nature, freedom and open space, which gives ${destination} extra weight.`,
+      },
+      balanced: "Your secondary signals are closely balanced, so the full answer path provides a stable tie-break.",
+      ranking: `Across all seven answers, ${destination} ranks highest among the three destinations for this travel type.`,
     },
-  };
-  return services[currentLang][finalPersonaType];
+  }[currentLang];
+  const strongestSecondarySignal = Object.entries(localVariant.affinity || {})
+    .map(([signal, weight]) => ({ signal, contribution: (scoreSummary[signal] || 0) * weight }))
+    .filter(({ contribution }) => contribution > 0)
+    .sort(
+      (a, b) =>
+        b.contribution - a.contribution || personaOrder.indexOf(a.signal) - personaOrder.indexOf(b.signal),
+    )[0]?.signal;
+
+  return [
+    copy.persona[finalPersonaType],
+    strongestSecondarySignal ? copy.signal[strongestSecondarySignal] : copy.balanced,
+    copy.ranking,
+  ];
 }
 
 function getResultContent() {
-  const fallbackTags = finalPersona.tags[currentLang];
-  const fallbackServices = finalPersona.skyscanner.services[currentLang];
   const localVariant = finalDestinationVariant || {
     destination: finalPersona.destination,
     note: finalPersona.note,
   };
-  const fallbackDestination = localize(localVariant.destination);
-  const fallbackNote = localize(localVariant.note);
-  const fallbackAngle = getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
-
-  if (!aiPersonalizedResult) {
-    return {
-      name: getPersonaDisplayName(finalPersona),
-      label: localize(finalPersona.label),
-      destination: fallbackDestination,
-      note: fallbackNote,
-      tags: fallbackTags,
-      skyscannerUrl: buildSkyscannerUrl(fallbackAngle, fallbackDestination),
-      skyscannerTitle: getLocalSkyscannerTitle(fallbackAngle, fallbackDestination),
-      skyscannerCopy: getLocalSkyscannerCopy(fallbackAngle, fallbackDestination),
-      skyscannerServices: getLocalSkyscannerServices(fallbackAngle),
-      shareCaption: "",
-    };
-  }
-
-  const aiDestination = aiPersonalizedResult.destination || fallbackDestination;
-  const aiServices = normalizeList(aiPersonalizedResult.skyscannerServices, fallbackServices);
-  const aiAngle = inferSkyscannerAngleFromServices(
-    aiServices,
-    aiPersonalizedResult.skyscannerAngle || fallbackAngle,
-  );
+  const destination = localize(localVariant.destination);
+  const angle = getSkyscannerAngleFromUrl(finalPersona.skyscanner.url);
 
   return {
-    name: aiPersonalizedResult.personaSubtype || getPersonaDisplayName(finalPersona),
-    label: aiPersonalizedResult.vibeLine || localize(finalPersona.label),
-    destination: aiDestination,
-    note: aiPersonalizedResult.resultNote || fallbackNote,
-    tags: normalizeList(aiPersonalizedResult.tags, fallbackTags),
-    skyscannerUrl: buildSkyscannerUrl(aiAngle, aiDestination),
-    skyscannerTitle: getLocalSkyscannerTitle(aiAngle, aiDestination),
-    skyscannerCopy: getLocalSkyscannerCopy(aiAngle, aiDestination),
-    skyscannerServices: aiServices,
-    shareCaption: aiPersonalizedResult.shareCaption || "",
+    name: getPersonaDisplayName(finalPersona),
+    label: localize(finalPersona.label),
+    destination,
+    note: localize(localVariant.note),
+    matchReasons: getDestinationMatchReasons(localVariant, destination),
+    tags: finalPersona.tags[currentLang],
+    skyscannerTitle: getLocalSkyscannerTitle(angle, destination),
+    skyscannerCopy: getLocalSkyscannerCopy(angle, destination),
+    skyscannerLinks: buildSkyscannerServiceLinks(destination),
   };
 }
 
@@ -1602,7 +1630,7 @@ function renderResult() {
   latestFriendMatch = calculateFriendMatch();
   const resultLede = latestFriendMatch
     ? getMatchResultLine(latestFriendMatch.score, latestFriendMatch.tone)
-    : aiPersonalizedResult?.shareCaption || localize(finalPersona.vibe);
+    : localize(finalPersona.vibe);
 
   progressFill.style.width = "100%";
   stepLabel.textContent = copy.complete;
@@ -1626,6 +1654,11 @@ function renderResult() {
   resultEls.placeholder.hidden = true;
   resultEls.destination.textContent = result.destination;
   resultEls.note.textContent = result.note;
+  resultEls.matchReasons.hidden = false;
+  resultEls.matchReasonsTitle.textContent = copy.matchReasonsTitle;
+  resultEls.matchReasonsList.innerHTML = result.matchReasons
+    .map((reason) => `<li>${escapeHtml(reason)}</li>`)
+    .join("");
   resultEls.score.textContent = latestFriendMatch ? `${latestFriendMatch.score}%` : copy.friendStampReady;
   resultEls.scoreLabel.textContent = latestFriendMatch ? copy.friendStampMatchedLabel : copy.friendStampReadyLabel;
   resultEls.scoreLink.href = getMatchShareUrl();
@@ -1633,11 +1666,13 @@ function renderResult() {
   resultEls.scoreLink.setAttribute("title", copy.friendStampLinkLabel);
   resultEls.scoreLink.setAttribute("aria-disabled", "false");
   resultEls.tags.innerHTML = result.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
-  resultEls.skyscannerLink.href = result.skyscannerUrl;
   resultEls.skyscannerTitle.textContent = result.skyscannerTitle;
   resultEls.skyscannerCopy.textContent = result.skyscannerCopy;
-  resultEls.skyscannerServices.innerHTML = result.skyscannerServices
-    .map((service) => `<span>${escapeHtml(service)}</span>`)
+  resultEls.skyscannerServices.innerHTML = result.skyscannerLinks
+    .map(
+      ({ label, url }) =>
+        `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} <span aria-hidden="true">↗</span></a>`,
+    )
     .join("");
   document.documentElement.style.setProperty("--accent", finalPersona.color);
 
@@ -1662,16 +1697,22 @@ function renderDefaultResult() {
   resultEls.vibe.textContent = copy.defaultVibe;
   resultEls.destination.textContent = copy.defaultDestination;
   resultEls.note.textContent = copy.defaultNote;
+  resultEls.matchReasons.hidden = true;
+  resultEls.matchReasonsList.innerHTML = "";
   resultEls.score.textContent = copy.friendStampLocked;
   resultEls.scoreLabel.textContent = sharedMatchProfile ? copy.matchPendingLabel : copy.friendStampLockedLabel;
   resultEls.scoreLink.removeAttribute("href");
   resultEls.scoreLink.removeAttribute("title");
   resultEls.scoreLink.setAttribute("aria-disabled", "true");
   resultEls.tags.innerHTML = copy.defaultTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
-  resultEls.skyscannerLink.href = "https://www.skyscanner.com/";
   resultEls.skyscannerTitle.textContent = copy.defaultSkyscannerTitle;
   resultEls.skyscannerCopy.textContent = copy.defaultSkyscannerCopy;
-  resultEls.skyscannerServices.innerHTML = copy.defaultTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
+  resultEls.skyscannerServices.innerHTML = buildSkyscannerServiceLinks("")
+    .map(
+      ({ label, url }) =>
+        `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} <span aria-hidden="true">↗</span></a>`,
+    )
+    .join("");
   document.documentElement.style.setProperty("--accent", "#0f837a");
 }
 
@@ -1681,224 +1722,10 @@ function restartQuiz() {
   finalPersona = null;
   finalPersonaType = null;
   finalDestinationVariant = null;
-  aiPersonalizedResult = null;
   latestFriendMatch = null;
-  aiRequestId += 1;
-  invalidateQuestionPersonalization(true);
   copyStatus.textContent = "";
   renderQuestion();
   renderDefaultResult();
-}
-
-function buildAiPayload() {
-  const selectedVariant = finalDestinationVariant || {
-    destination: finalPersona.destination,
-    note: finalPersona.note,
-  };
-
-  return {
-    language: currentLang,
-    persona: {
-      type: finalPersonaType,
-      name: finalPersona.name,
-      displayName: getPersonaDisplayName(finalPersona),
-      label: localize(finalPersona.label),
-      destination: localize(selectedVariant.destination),
-      note: localize(selectedVariant.note),
-      tags: finalPersona.tags[currentLang],
-      skyscannerTitle: localize(finalPersona.skyscanner.title),
-      skyscannerCopy: localize(finalPersona.skyscanner.copy),
-      skyscannerServices: finalPersona.skyscanner.services[currentLang],
-    },
-    destinationPhotoLibrary: getDestinationPhotoLibrary(),
-    scores: getScoreSummary(),
-    answers: answers.map((answer, index) => ({
-      step: index + 1,
-      questionId: answer.questionId,
-      questionLabel: localizedValue(answer.questionLabel),
-      question: localizedValue(answer.questionTitle),
-      selectedLetter: answer.optionLetter,
-      selected: localizedValue(answer.optionTitle),
-      selectedDetail: localizedValue(answer.optionCopy),
-      primaryType: answer.type,
-      score: answer.score,
-    })),
-  };
-}
-
-function buildAiQuestionPayload(questionId) {
-  const question = questionBank[questionId];
-  return {
-    language: currentLang,
-    step: Math.min(answers.length + 1, totalQuizSteps),
-    totalSteps: totalQuizSteps,
-    sharedMatchMode: Boolean(sharedMatchProfile),
-    scores: getScoreSummary(),
-    question: {
-      id: questionId,
-      label: localize(question.label),
-      title: localize(question.title),
-      options: question.options.map((option) => ({
-        letter: option.letter,
-        title: localize(option.title),
-        copy: localize(option.copy),
-        primaryType: getPrimaryType(option),
-        scoreIntent: option.score,
-      })),
-    },
-    answers: answers.map((answer, index) => ({
-      step: index + 1,
-      questionId: answer.questionId,
-      questionLabel: localizedValue(answer.questionLabel),
-      question: localizedValue(answer.questionTitle),
-      selectedLetter: answer.optionLetter,
-      selected: localizedValue(answer.optionTitle),
-      selectedDetail: localizedValue(answer.optionCopy),
-      primaryType: answer.type,
-    })),
-  };
-}
-
-function isValidAiQuestionResult(result, baseQuestion) {
-  return (
-    result &&
-    typeof result.label === "string" &&
-    typeof result.title === "string" &&
-    Array.isArray(result.options) &&
-    result.options.length === baseQuestion.options.length &&
-    result.options.every(
-      (option, index) =>
-        option &&
-        option.letter === baseQuestion.options[index].letter &&
-        typeof option.title === "string" &&
-        typeof option.copy === "string" &&
-        option.title.trim() &&
-        option.copy.trim(),
-    )
-  );
-}
-
-function isValidAiResult(result) {
-  const requiredStrings = [
-    "personaSubtype",
-    "vibeLine",
-    "destination",
-    "resultNote",
-    "skyscannerAngle",
-    "skyscannerTitle",
-    "skyscannerCopy",
-    "shareCaption",
-  ];
-
-  return (
-    result &&
-    requiredStrings.every((key) => typeof result[key] === "string" && result[key].trim()) &&
-    Array.isArray(result.tags) &&
-    result.tags.length >= 3 &&
-    Array.isArray(result.skyscannerServices) &&
-    result.skyscannerServices.length >= 3
-  );
-}
-
-function shouldRequestAiPersonalization() {
-  return enableAiPersonalization;
-}
-
-function shouldRequestPersonalizedResult() {
-  return shouldRequestAiPersonalization();
-}
-
-async function requestPersonalizedQuestion(questionId = currentQuestionId) {
-  if (!shouldRequestAiPersonalization() || finalPersona || answers.length === 0) {
-    return;
-  }
-
-  const baseQuestion = questionBank[questionId];
-  if (!baseQuestion) {
-    return;
-  }
-
-  const questionKey = getQuestionPersonalizationKey(questionId);
-  if (personalizedQuestions.has(questionKey) || aiQuestionPendingKeys.has(questionKey)) {
-    return;
-  }
-
-  const requestId = aiQuestionRequestId + 1;
-  aiQuestionRequestId = requestId;
-  aiQuestionPendingKeys.add(questionKey);
-
-  try {
-    const response = await fetch("/api/personalize-question", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildAiQuestionPayload(questionId)),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI endpoint returned ${response.status}`);
-    }
-
-    const data = await response.json();
-    const personalized = normalizeAiQuestionResult(data.result, baseQuestion);
-    if (!data.ok || !personalized) {
-      throw new Error(data.error || "Invalid AI question");
-    }
-
-    if (
-      requestId !== aiQuestionRequestId ||
-      finalPersona ||
-      currentQuestionId !== questionId ||
-      questionKey !== getQuestionPersonalizationKey(questionId)
-    ) {
-      return;
-    }
-
-    personalizedQuestions.set(questionKey, personalized);
-    renderQuestion();
-  } catch {
-    // AI question personalization is optional; keep the deterministic local question.
-  } finally {
-    aiQuestionPendingKeys.delete(questionKey);
-  }
-}
-
-async function requestPersonalizedResult() {
-  if (!shouldRequestPersonalizedResult()) {
-    return;
-  }
-
-  const requestId = aiRequestId + 1;
-  aiRequestId = requestId;
-  copyStatus.textContent = uiCopy[currentLang].aiLoading;
-
-  try {
-    const response = await fetch("/api/generate-result", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildAiPayload()),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI endpoint returned ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!data.ok || !isValidAiResult(data.result)) {
-      throw new Error(data.error || "Invalid AI result");
-    }
-
-    if (requestId !== aiRequestId || !finalPersona) {
-      return;
-    }
-
-    aiPersonalizedResult = data.result;
-    renderResult();
-    copyStatus.textContent = uiCopy[currentLang].aiReady;
-  } catch {
-    if (requestId === aiRequestId && finalPersona) {
-      copyStatus.textContent = uiCopy[currentLang].aiFallback;
-    }
-  }
 }
 
 function getShareText() {
@@ -1980,10 +1807,6 @@ async function createResultCardBlob() {
   roundRect(ctx, 84, 106, 912, 1240, 40);
   ctx.fill();
   ctx.restore();
-
-  ctx.fillStyle = "#005eb8";
-  roundRect(ctx, 84, 106, 912, 14, 7);
-  ctx.fill();
 
   ctx.font = "900 32px system-ui, sans-serif";
   const servicePillWidth = Math.min(410, Math.max(304, ctx.measureText(copy.posterServices).width + 72));
@@ -2237,6 +2060,56 @@ function drawCanvasQrCode(ctx, value, x, y, size) {
   return true;
 }
 
+function installTestApi() {
+  if (new URLSearchParams(window.location.search).get("test") !== "1") {
+    return;
+  }
+
+  const seedAnswersForPersona = (type) => {
+    if (!personaOrder.includes(type)) {
+      throw new Error(`Unknown persona type: ${type}`);
+    }
+
+    answers.length = 0;
+    for (let index = 0; index < totalQuizSteps; index += 1) {
+      answers.push({
+        questionId: `test-${index}`,
+        type,
+        score: { [type]: 3 },
+      });
+    }
+  };
+
+  window.__travelPersonalityTest = Object.freeze({
+    completeAs(type) {
+      seedAnswersForPersona(type);
+      showResult();
+      return {
+        type: finalPersonaType,
+        destination: localize(finalDestinationVariant.destination),
+      };
+    },
+    renderDestination(type, destinationIndex) {
+      const variants = personaDestinationAlternatives[type];
+      const variant = variants?.[destinationIndex];
+      if (!variant) {
+        throw new Error(`Unknown destination variant: ${type}/${destinationIndex}`);
+      }
+
+      seedAnswersForPersona(type);
+      finalPersonaType = type;
+      finalPersona = personas[type];
+      finalDestinationVariant = variant;
+      latestFriendMatch = calculateFriendMatch();
+      renderResult();
+      return getResultContent();
+    },
+    getSharedMatchProfile() {
+      return sharedMatchProfile;
+    },
+  });
+}
+
 backButton.addEventListener("click", () => {
   if (answers.length > 0) {
     const previousAnswer = answers.pop();
@@ -2244,10 +2117,7 @@ backButton.addEventListener("click", () => {
     finalPersona = null;
     finalPersonaType = null;
     finalDestinationVariant = null;
-    aiPersonalizedResult = null;
     latestFriendMatch = null;
-    aiRequestId += 1;
-    invalidateQuestionPersonalization(true);
     resultActions.hidden = true;
     renderQuestion();
     renderDefaultResult();
@@ -2262,13 +2132,10 @@ languageButtons.forEach((button) => {
   button.addEventListener("click", () => {
     currentLang = button.dataset.lang;
     copyStatus.textContent = "";
-    invalidateQuestionPersonalization(true);
     renderStaticCopy();
 
     if (finalPersona) {
-      aiPersonalizedResult = null;
       renderResult();
-      requestPersonalizedResult();
     } else {
       renderDefaultResult();
       renderQuestion();
@@ -2280,3 +2147,4 @@ sharedMatchProfile = readSharedMatchProfile();
 renderStaticCopy();
 renderDefaultResult();
 renderQuestion();
+installTestApi();

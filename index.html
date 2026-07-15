@@ -3,8 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Travel Personality | 旅行人格测试</title>
-    <link rel="stylesheet" href="styles.css?v=20260714-1" />
+    <title>旅行人格测试｜测出你的旅行方式与下一站</title>
+    <meta
+      name="description"
+      content="完成 7 道旅行选择题，发现你的旅行人格，从 18 个目的地中找到下一站，还能邀请好友测试旅行搭子匹配度。"
+    />
+    <meta name="theme-color" content="#061f3a" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://carolineli352.github.io/travel-personality/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Travel Personality" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:url" content="https://carolineli352.github.io/travel-personality/" />
+    <meta property="og:title" content="旅行人格测试｜测出你的旅行方式与下一站" />
+    <meta
+      property="og:description"
+      content="7 道题测出你的旅行人格，从 18 个目的地中找到下一站，再邀请好友看看你们适不适合一起出发。"
+    />
+    <meta property="og:image" content="https://carolineli352.github.io/travel-personality/assets/social-preview.jpg" />
+    <meta property="og:image:secure_url" content="https://carolineli352.github.io/travel-personality/assets/social-preview.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Travel Personality 旅行人格测试预览，展示旅行人物、路线、地图和目的地卡片" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="旅行人格测试｜测出你的旅行方式与下一站" />
+    <meta
+      name="twitter:description"
+      content="7 道题测出你的旅行人格，从 18 个目的地中找到下一站，再邀请好友测试旅行搭子匹配度。"
+    />
+    <meta name="twitter:image" content="https://carolineli352.github.io/travel-personality/assets/social-preview.jpg" />
+    <meta name="twitter:image:alt" content="Travel Personality 旅行人格测试社交分享封面" />
+    <link rel="stylesheet" href="styles.css?v=20260715-3" />
   </head>
   <body>
     <header class="topbar">
@@ -31,9 +67,9 @@
             测测你的旅行人格，看看你适合飞去哪里。
           </p>
           <div class="service-strip" aria-label="Travel search categories">
-            <span id="serviceFlights">机票</span>
-            <span id="serviceHotels">酒店</span>
-            <span id="serviceCars">租车</span>
+            <a id="serviceFlights" href="https://www.skyscanner.net/g/referrals/v1/flights/home?market=CN&amp;locale=zh-CN&amp;currency=CNY" target="_blank" rel="noopener noreferrer">机票</a>
+            <a id="serviceHotels" href="https://www.skyscanner.net/g/referrals/v1/hotels/home-view?market=CN&amp;locale=zh-CN&amp;currency=CNY" target="_blank" rel="noopener noreferrer">酒店</a>
+            <a id="serviceCars" href="https://www.skyscanner.net/g/referrals/v1/cars/home?market=CN&amp;locale=zh-CN&amp;currency=CNY" target="_blank" rel="noopener noreferrer">租车</a>
           </div>
         </div>
 
@@ -84,22 +120,24 @@
               <p class="result-note" id="resultNote">
                 你的下一站还在洗牌：可能是为一口好吃的飞走，也可能是租辆车去看海。
               </p>
-              <a
+              <section class="match-reasons" id="matchReasons" hidden>
+                <strong id="matchReasonsTitle">为什么推荐这里</strong>
+                <ul id="matchReasonsList"></ul>
+              </section>
+              <section
                 class="skyscanner-card"
-                id="skyscannerLink"
-                href="https://www.skyscanner.com/"
-                target="_blank"
-                rel="noopener noreferrer"
+                id="skyscannerCard"
+                aria-labelledby="skyscannerTitle"
               >
                 <span class="skyscanner-label" id="skyscannerLabel">Skyscanner 灵感站</span>
                 <strong id="skyscannerTitle">先答题，再决定怎么飞</strong>
                 <small id="skyscannerCopy">等人格出炉，再去找一条更对味的路线：飞过去、住舒服，或一路开到风景里。</small>
-                <span class="skyscanner-services" id="skyscannerServices">
-                  <span>机票</span>
-                  <span>酒店</span>
-                  <span>租车</span>
-                </span>
-              </a>
+                <nav class="skyscanner-services" id="skyscannerServices" aria-label="Skyscanner travel searches">
+                  <a href="https://www.skyscanner.com/flights" target="_blank" rel="noopener noreferrer">机票 <span aria-hidden="true">↗</span></a>
+                  <a href="https://www.skyscanner.com/hotels" target="_blank" rel="noopener noreferrer">酒店 <span aria-hidden="true">↗</span></a>
+                  <a href="https://www.skyscanner.com/car-rental" target="_blank" rel="noopener noreferrer">租车 <span aria-hidden="true">↗</span></a>
+                </nav>
+              </section>
               <a
                 class="score-stamp"
                 id="matchShareLink"
@@ -123,6 +161,6 @@
     </main>
 
     <script src="vendor/qrcode.min.js?v=1.4.4"></script>
-    <script src="script.js?v=20260714-8"></script>
+    <script src="script.js?v=20260715-9"></script>
   </body>
 </html>
