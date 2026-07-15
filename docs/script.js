@@ -33,6 +33,7 @@ const resultEls = {
   destination: document.querySelector("#destinationName"),
   tags: document.querySelector("#tagRow"),
   note: document.querySelector("#resultNote"),
+  scoreLink: document.querySelector("#matchShareLink"),
   score: document.querySelector("#scoreValue"),
   scoreLabel: document.querySelector("#scoreLabel"),
   skyscannerLink: document.querySelector("#skyscannerLink"),
@@ -78,12 +79,9 @@ const uiCopy = {
     friendStampReady: "分享",
     friendStampReadyLabel: "看匹配度",
     friendStampMatchedLabel: "搭子 match",
+    friendStampLinkLabel: "打开好友旅行匹配链接",
     matchPendingLabel: "等待好友答题",
     matchInvite: "好友邀请你测测旅行人格，答完就能看你们适不适合一起出发。",
-    matchResultLine: (score, tone) => `你们的旅行搭子指数是 ${score}%。${tone}`,
-    matchToneHigh: "天选搭子，已经可以开始讨论请假日期。",
-    matchToneGood: "很能一起玩，先把预算和作息对齐就稳了。",
-    matchToneCareful: "有点互补，出发前最好先谈清楚谁早起、谁找餐厅。",
     copyDone: "分享文案和匹配链接已复制。",
     downloadFirst: "先完成测试，再保存结果卡。",
     savePreparing: "正在生成结果卡...",
@@ -95,12 +93,20 @@ const uiCopy = {
     aiReady: "AI 个性化结果已生成。",
     aiFallback: "结果卡已生成，看看你的下一站是不是很对味。",
     shareFallback: "我刚在测旅行人格，想看看会抽到哪座城市。",
-    shareInvite: "你也测测看你的旅行人格？顺便看看我们适不适合当旅行搭子：",
+    shareInviteVariants: [
+      "我刚做完一个旅行搭子测试。轮到你了，看看我们一起出发会有多合拍：",
+      "下一趟要不要一起走？先测测我们的预算、饭点和旅行节奏合不合：",
+      "发你一张旅行搭子考卷。答完就知道我们适不适合一起订票：",
+      "如果我们一起旅行，谁做攻略、谁找吃的？测完见分晓：",
+      "先别约目的地，来看看我们有没有成为旅行搭子的潜力：",
+      "一段旅程能不能顺利，可能从这几道题就看出来了：",
+    ],
     posterKicker: "我的旅行人格",
     posterDestination: "这次抽到",
     posterServices: "旅行人格测试",
     posterReaction: "这次的结果，有点像我。",
     posterBrand: "没有标准答案，开心就好。",
+    posterQrLabel: "扫码测搭子",
   },
   en: {
     pageTitle: "Travel Personality | Find Your Travel Type",
@@ -138,12 +144,9 @@ const uiCopy = {
     friendStampReady: "Share",
     friendStampReadyLabel: "match check",
     friendStampMatchedLabel: "duo match",
+    friendStampLinkLabel: "Open the travel match link",
     matchPendingLabel: "waiting for friend",
     matchInvite: "A friend invited you to find your travel type. Finish the quiz to see how well you would travel together.",
-    matchResultLine: (score, tone) => `Your travel-duo match is ${score}%. ${tone}`,
-    matchToneHigh: "Very strong match. You can probably start comparing dates.",
-    matchToneGood: "Good travel-duo energy. Align budget and pace, then go.",
-    matchToneCareful: "Complementary, but agree on mornings, food stops and budget first.",
     copyDone: "Share caption and match link copied.",
     downloadFirst: "Finish the quiz first, then save your card.",
     savePreparing: "Creating your result card...",
@@ -155,12 +158,20 @@ const uiCopy = {
     aiReady: "AI-personalized result ready.",
     aiFallback: "Your result card is ready. See if the next trip fits your vibe.",
     shareFallback: "I just took a travel personality quiz to see which city I would draw.",
-    shareInvite: "Want to find your travel personality too? Let's see whether we'd make good travel buddies:",
+    shareInviteVariants: [
+      "I just took a travel-duo test. Your turn — let's see how well we would travel together:",
+      "Should we take a trip together? First, let's compare budget, meals and travel pace:",
+      "Sending you a tiny travel-buddy exam. Finish it and see whether we should book together:",
+      "If we traveled together, who would plan and who would find the food? Let's find out:",
+      "No destination picked yet. First, let's see whether we have travel-duo potential:",
+      "A few questions might reveal how smoothly we would travel together:",
+    ],
     posterKicker: "My travel type",
     posterDestination: "This time I got",
     posterServices: "TRAVEL QUIZ",
     posterReaction: "Honestly, this feels like me.",
     posterBrand: "No right answer — just for fun.",
+    posterQrLabel: "Scan to match",
   },
 };
 
@@ -572,98 +583,176 @@ const personas = {
 const personaDestinationAlternatives = {
   weekend: [
     {
-      destination: { zh: "首尔", en: "Seoul" },
+      destination: { zh: "福冈", en: "Fukuoka" },
       note: {
-        zh: "这次抽中首尔：交通清楚、街区密度高，咖啡、逛街和夜宵很容易压缩进一个短周末。",
-        en: "This time you matched Seoul: clear transport and dense neighborhoods make coffee, shopping and late-night food fit a short weekend.",
+        zh: "推荐你去福冈：城市紧凑、移动轻松，拉面、海边和近郊散步都能装进一个短周末。",
+        en: "Matched destination: Fukuoka. Its compact layout fits ramen, the waterfront and an easy day trip into one short weekend.",
       },
+      affinity: { budget: 2, food: 2, culture: 1 },
+      search: { iata: "FUK", hotelQuery: "Fukuoka" },
     },
     {
-      destination: { zh: "曼谷", en: "Bangkok" },
+      destination: { zh: "台北", en: "Taipei" },
       note: {
-        zh: "这次抽中曼谷：只挑一两个街区也能迅速进入状态，适合把有限时间留给夜市、按摩和好吃的。",
-        en: "This time you matched Bangkok: one or two neighborhoods are enough for markets, massages and great food on a fast escape.",
+        zh: "推荐你去台北：捷运好上手，夜市、咖啡店和近郊温泉切换很快，临时出发也不难进入状态。",
+        en: "Matched destination: Taipei. Easy transit connects night markets, cafés and nearby hot springs without overplanning.",
       },
+      affinity: { food: 3, nature: 1, culture: 1 },
+      search: { iata: "TPE", hotelQuery: "Taipei" },
+    },
+    {
+      destination: { zh: "新加坡", en: "Singapore" },
+      note: {
+        zh: "推荐你去新加坡：交通直接、街区清晰，从建筑和展览到熟食中心，少做攻略也能高效逛完。",
+        en: "Matched destination: Singapore. Straightforward transit makes architecture, galleries and hawker centres easy to combine on a quick break.",
+      },
+      affinity: { luxury: 3, culture: 2, food: 1 },
+      search: { iata: "SIN", hotelQuery: "Singapore" },
     },
   ],
   food: [
     {
-      destination: { zh: "福冈", en: "Fukuoka" },
+      destination: { zh: "曼谷", en: "Bangkok" },
       note: {
-        zh: "这次抽中福冈：拉面、屋台、海鲜和咖啡集中，胃的路线不用绕远，短时间也能吃得很完整。",
-        en: "This time you matched Fukuoka: ramen, yatai, seafood and coffee sit close together, so an appetite-led route stays easy.",
+        zh: "推荐你去曼谷：街头小吃、夜市、咖啡店和认真吃一顿的餐厅层次丰富，胃可以一路带路。",
+        en: "Matched destination: Bangkok. Street food, markets, cafés and destination restaurants create a food route at every price point.",
       },
+      affinity: { budget: 2, nature: 1, luxury: 1 },
+      search: { iata: "BKK", hotelQuery: "Bangkok" },
     },
     {
-      destination: { zh: "首尔", en: "Seoul" },
+      destination: { zh: "墨西哥城", en: "Mexico City" },
       note: {
-        zh: "这次抽中首尔：市场、烤肉、咖啡店和深夜食堂各有一条路线，很适合按街区一路吃过去。",
-        en: "This time you matched Seoul: markets, barbecue, cafés and late-night spots give every neighborhood its own food route.",
+        zh: "推荐你去墨西哥城：市场、街头玉米饼、咖啡和当代餐厅散在不同街区，适合边吃边认识城市。",
+        en: "Matched destination: Mexico City. Markets, tacos, coffee and contemporary dining turn each neighborhood into a different tasting route.",
       },
+      affinity: { culture: 3, nature: 1, budget: 1 },
+      search: { iata: "MEX", hotelQuery: "Mexico City" },
+    },
+    {
+      destination: { zh: "博洛尼亚", en: "Bologna" },
+      note: {
+        zh: "推荐你去博洛尼亚：拱廊下藏着熟食店、市场和传统餐馆，愿意为一顿饭慢下来的人会很满足。",
+        en: "Matched destination: Bologna. Markets, delis and traditional tables reward travelers who are happy to slow the day around a meal.",
+      },
+      affinity: { luxury: 2, culture: 2, weekend: 1 },
+      search: { iata: "BLQ", hotelQuery: "Bologna" },
     },
   ],
   budget: [
     {
-      destination: { zh: "曼谷", en: "Bangkok" },
+      destination: { zh: "清迈", en: "Chiang Mai" },
       note: {
-        zh: "这次抽中曼谷：住宿和餐饮档位丰富，预算可以灵活分配，省下来的部分还能多换几顿和一次按摩。",
-        en: "This time you matched Bangkok: wide-ranging stays and food make it easy to rebalance the budget and still add another meal or massage.",
+        zh: "推荐你去清迈：住宿、餐饮和慢旅行体验选择多，预算省下来还能安排手作、咖啡和自然行程。",
+        en: "Matched destination: Chiang Mai. Varied stays, food and slow-travel experiences let a careful budget stretch into more activities.",
       },
+      affinity: { nature: 3, luxury: 1, food: 1 },
+      search: { iata: "CNX", hotelQuery: "Chiang Mai" },
     },
     {
-      destination: { zh: "福冈", en: "Fukuoka" },
+      destination: { zh: "河内", en: "Hanoi" },
       note: {
-        zh: "这次抽中福冈：城市紧凑、移动成本低，少花时间和交通费，也是一种很聪明的旅行性价比。",
-        en: "This time you matched Fukuoka: a compact city keeps transport and wasted time low, which is its own kind of smart value.",
+        zh: "推荐你去河内：老城区适合步行，街头小吃和咖啡密度高，少花交通成本也能获得很完整的城市体验。",
+        en: "Matched destination: Hanoi. A walkable old quarter and dense street-food scene deliver a full city break with fewer transport costs.",
       },
+      affinity: { food: 3, weekend: 1, culture: 1 },
+      search: { iata: "HAN", hotelQuery: "Hanoi" },
+    },
+    {
+      destination: { zh: "第比利斯", en: "Tbilisi" },
+      note: {
+        zh: "推荐你去第比利斯：老城、硫磺浴和周边山谷适合拉长停留，愿意多走一点就能把预算花在体验上。",
+        en: "Matched destination: Tbilisi. The old town, bathhouses and nearby valleys suit a longer stay where spending can focus on experiences.",
+      },
+      affinity: { culture: 2, nature: 2, luxury: 1 },
+      search: { iata: "TBS", hotelQuery: "Tbilisi" },
     },
   ],
   luxury: [
     {
-      destination: { zh: "冲绳", en: "Okinawa" },
+      destination: { zh: "京都", en: "Kyoto" },
       note: {
-        zh: "这次抽中冲绳：海景房、度假酒店和慢早晨都很对你的节奏，少排几个点反而更像真正休息。",
-        en: "This time you matched Okinawa: sea-view stays, resort mornings and fewer plans turn the trip into an actual reset.",
+        zh: "推荐你去京都：旅馆、料理、庭园和安静街巷都适合慢慢体验，很容易把假期过出仪式感。",
+        en: "Matched destination: Kyoto. Ryokan stays, food, gardens and quiet streets make a slower, stay-led trip feel intentional.",
       },
+      affinity: { culture: 3, food: 1, weekend: 1 },
+      search: { iata: "OSA", hotelQuery: "Kyoto" },
     },
     {
-      destination: { zh: "曼谷", en: "Bangkok" },
+      destination: { zh: "巴厘岛", en: "Bali" },
       note: {
-        zh: "这次抽中曼谷：酒店、泳池、早餐和按摩选择很多，完全可以把住宿本身安排成假期主线。",
-        en: "This time you matched Bangkok: hotels, pools, breakfast and spa choices make the stay itself a convincing main event.",
+        zh: "推荐你去巴厘岛：泳池别墅、水疗、海岸和稻田可以围绕住宿展开，留白越多越像真正放假。",
+        en: "Matched destination: Bali. Villas, spas, coastlines and rice fields let the stay lead while the schedule keeps plenty of space.",
       },
+      affinity: { nature: 3, food: 1, budget: 1 },
+      search: { iata: "DPS", hotelQuery: "Bali" },
+    },
+    {
+      destination: { zh: "马拉喀什", en: "Marrakech" },
+      note: {
+        zh: "推荐你去马拉喀什：住进庭院酒店，把早餐、泳池、香料市场和花园排成慢节奏，酒店本身就是目的地。",
+        en: "Matched destination: Marrakech. A riad can anchor slow mornings, gardens, markets and pool time, making the stay part of the destination.",
+      },
+      affinity: { culture: 2, food: 2, nature: 1 },
+      search: { iata: "RAK", hotelQuery: "Marrakech" },
     },
   ],
   culture: [
     {
-      destination: { zh: "京都", en: "Kyoto" },
+      destination: { zh: "首尔", en: "Seoul" },
       note: {
-        zh: "这次抽中京都：寺院、庭园、街巷和料理都适合分区规划，路线做得越细，现场反而越从容。",
-        en: "This time you matched Kyoto: temples, gardens, lanes and food reward a carefully grouped route without making the day feel rushed.",
+        zh: "推荐你去首尔：设计、展览、街区商业和餐饮都很集中，适合按片区排出一条漂亮的城市路线。",
+        en: "Matched destination: Seoul. Design, galleries, retail and food neighborhoods make it easy to build a precise city route.",
       },
+      affinity: { weekend: 2, food: 2, budget: 1 },
+      search: { iata: "SEL", hotelQuery: "Seoul" },
     },
     {
-      destination: { zh: "福冈", en: "Fukuoka" },
+      destination: { zh: "巴黎", en: "Paris" },
       note: {
-        zh: "这次抽中福冈：城市尺度友好，博物馆、设计商店、海边和街区路线很容易排成一张清爽的计划表。",
-        en: "This time you matched Fukuoka: museums, design shops, the waterfront and compact neighborhoods make a clean, satisfying plan.",
+        zh: "推荐你去巴黎：博物馆、建筑、书店和街区路线足够丰富，提前预约和分区规划会让你的计划表发挥价值。",
+        en: "Matched destination: Paris. Museums, architecture, bookshops and distinct neighborhoods reward advance booking and careful route planning.",
       },
+      affinity: { luxury: 3, food: 1, weekend: 1 },
+      search: { iata: "PAR", hotelQuery: "Paris" },
+    },
+    {
+      destination: { zh: "伊斯坦布尔", en: "Istanbul" },
+      note: {
+        zh: "推荐你去伊斯坦布尔：宫殿、清真寺、渡轮和市集把历史铺在城市两岸，适合用区域和主题拆解路线。",
+        en: "Matched destination: Istanbul. Palaces, mosques, ferries and bazaars make a layered city that rewards planning by area and theme.",
+      },
+      affinity: { food: 2, nature: 2, budget: 1 },
+      search: { iata: "IST", hotelQuery: "Istanbul" },
     },
   ],
   nature: [
     {
-      destination: { zh: "清迈", en: "Chiang Mai" },
+      destination: { zh: "冲绳", en: "Okinawa" },
       note: {
-        zh: "这次抽中清迈：山路、乡野、咖啡和慢节奏适合随时改路线，把一天交给天气和当下心情。",
-        en: "This time you matched Chiang Mai: mountain roads, countryside and a slower rhythm leave room to follow the weather and your mood.",
+        zh: "推荐你去冲绳：海岸线、离岛和自驾公路组合自由，想停就停，很适合把路线交给天气和海风。",
+        en: "Matched destination: Okinawa. Coastlines, islands and open roads make it easy to stop when the weather or the view changes the plan.",
       },
+      affinity: { weekend: 2, food: 1, budget: 1 },
+      search: { iata: "OKA", hotelQuery: "Okinawa" },
     },
     {
-      destination: { zh: "京都", en: "Kyoto" },
+      destination: { zh: "皇后镇", en: "Queenstown" },
       note: {
-        zh: "这次抽中京都：山边步道、庭园和安静街区能把城市与自然接在一起，不赶场也有很多风景。",
-        en: "This time you matched Kyoto: hillside walks, gardens and quiet neighborhoods connect city and nature without a packed schedule.",
+        zh: "推荐你去皇后镇：湖泊、山路和公路旅行选择很多，适合租车留白，在风景好的地方临时多停一会儿。",
+        en: "Matched destination: Queenstown. Lakes, mountain roads and road-trip options suit an open plan with extra time wherever the view wins.",
       },
+      affinity: { luxury: 2, weekend: 1, culture: 1 },
+      search: { iata: "ZQN", hotelQuery: "Queenstown" },
+    },
+    {
+      destination: { zh: "雷克雅未克", en: "Reykjavik" },
+      note: {
+        zh: "推荐你去雷克雅未克：以城市为起点追瀑布、火山地貌和温泉，适合愿意研究路线又接受天气改线的人。",
+        en: "Matched destination: Reykjavik. It is a practical base for waterfalls, volcanic landscapes and hot springs when weather gets a vote.",
+      },
+      affinity: { culture: 2, budget: 1, luxury: 1 },
+      search: { iata: "REK", hotelQuery: "Reykjavik" },
     },
   ],
 };
@@ -691,47 +780,47 @@ const destinationHeroImages = {
     src: "assets/destinations/fukuoka.jpg",
     focus: "center 58%",
     destination: { zh: "福冈", en: "Fukuoka" },
-    alt: { zh: "福冈海边城市旅行照片", en: "Fukuoka seaside city travel photo" },
+    alt: { zh: "轻松短途城市旅行氛围照片", en: "Easy short city-break travel photo" },
   },
   food: {
     src: "assets/destinations/bangkok.jpg",
     focus: "center 55%",
     destination: { zh: "曼谷", en: "Bangkok" },
-    alt: { zh: "曼谷夜市和街头美食旅行照片", en: "Bangkok night market and street food travel photo" },
+    alt: { zh: "夜市和街头美食旅行氛围照片", en: "Night market and street-food travel photo" },
   },
   budget: {
     src: "assets/destinations/chiang-mai.jpg",
     focus: "center 54%",
     destination: { zh: "清迈", en: "Chiang Mai" },
-    alt: { zh: "清迈古城和山景旅行照片", en: "Chiang Mai old city and mountain travel photo" },
+    alt: { zh: "高性价比慢旅行氛围照片", en: "Good-value slow-travel photo" },
   },
   luxury: {
     src: "assets/destinations/kyoto.jpg",
     focus: "center 56%",
     destination: { zh: "京都", en: "Kyoto" },
-    alt: { zh: "京都庭园和旅馆街巷旅行照片", en: "Kyoto garden and ryokan street travel photo" },
+    alt: { zh: "庭园和舒适住宿旅行氛围照片", en: "Garden and comfortable-stay travel photo" },
   },
   culture: {
     src: "assets/destinations/seoul.jpg",
     focus: "center 54%",
     destination: { zh: "首尔", en: "Seoul" },
-    alt: { zh: "首尔城市天际线和街区旅行照片", en: "Seoul skyline and neighborhood travel photo" },
+    alt: { zh: "城市天际线和文化街区旅行照片", en: "Skyline and cultural-neighborhood travel photo" },
   },
   nature: {
     src: "assets/destinations/okinawa.jpg",
     focus: "center 57%",
     destination: { zh: "冲绳", en: "Okinawa" },
-    alt: { zh: "冲绳海岸和自驾公路旅行照片", en: "Okinawa coast and road trip travel photo" },
+    alt: { zh: "海岸和自驾公路旅行氛围照片", en: "Coast and road-trip travel photo" },
   },
 };
 
 const destinationHeroKeywords = [
-  { type: "weekend", keywords: ["福冈", "fukuoka"] },
-  { type: "food", keywords: ["曼谷", "bangkok"] },
-  { type: "budget", keywords: ["清迈", "chiangmai", "chiang mai"] },
-  { type: "luxury", keywords: ["京都", "kyoto"] },
-  { type: "culture", keywords: ["首尔", "seoul"] },
-  { type: "nature", keywords: ["冲绳", "okinawa"] },
+  { type: "weekend", keywords: ["福冈", "fukuoka", "台北", "taipei", "新加坡", "singapore"] },
+  { type: "food", keywords: ["曼谷", "bangkok", "墨西哥城", "mexicocity", "博洛尼亚", "bologna"] },
+  { type: "budget", keywords: ["清迈", "chiangmai", "河内", "hanoi", "第比利斯", "tbilisi"] },
+  { type: "luxury", keywords: ["京都", "kyoto", "巴厘岛", "bali", "马拉喀什", "marrakech"] },
+  { type: "culture", keywords: ["首尔", "seoul", "巴黎", "paris", "伊斯坦布尔", "istanbul"] },
+  { type: "nature", keywords: ["冲绳", "okinawa", "皇后镇", "queenstown", "雷克雅未克", "reykjavik"] },
 ];
 
 const answers = [];
@@ -790,12 +879,36 @@ function getRandomItem(items) {
   return items[getRandomIndex(items.length)];
 }
 
+function getStableVariant(items, seed) {
+  if (!items.length) {
+    return "";
+  }
+
+  const hash = String(seed).split("").reduce(
+    (value, character) => ((value << 5) - value + character.charCodeAt(0)) | 0,
+    0,
+  );
+  return items[Math.abs(hash) % items.length];
+}
+
 function chooseDestinationVariant(type) {
-  const persona = personas[type];
-  const variants = [
-    { destination: persona.destination, note: persona.note },
-    ...(personaDestinationAlternatives[type] || []),
-  ];
+  const variants = personaDestinationAlternatives[type] || [];
+  if (!variants.length) {
+    return { destination: personas[type].destination, note: personas[type].note };
+  }
+
+  const scoreSummary = getScoreSummary();
+  const rankedVariants = variants
+    .map((variant) => ({
+      variant,
+      score: Object.entries(variant.affinity || {}).reduce(
+        (total, [signal, weight]) => total + (scoreSummary[signal] || 0) * weight,
+        0,
+      ),
+    }))
+    .sort((a, b) => b.score - a.score);
+  const bestScore = rankedVariants[0].score;
+  const bestVariants = rankedVariants.filter(({ score }) => score === bestScore).map(({ variant }) => variant);
   const storageKey = `travel-personality:last-destination:${type}`;
   let lastDestination = "";
 
@@ -805,8 +918,8 @@ function chooseDestinationVariant(type) {
     // Some file:// or privacy modes disable session storage; randomness still works without it.
   }
 
-  const freshVariants = variants.filter((variant) => variant.destination.en !== lastDestination);
-  const selected = getRandomItem(freshVariants.length ? freshVariants : variants);
+  const freshVariants = bestVariants.filter((variant) => variant.destination.en !== lastDestination);
+  const selected = getRandomItem(freshVariants.length ? freshVariants : bestVariants);
 
   try {
     window.sessionStorage.setItem(storageKey, selected.destination.en);
@@ -898,24 +1011,34 @@ function decodeMatchPayload(payload) {
 }
 
 function sanitizeSharedMatchProfile(profile) {
-  if (!profile || profile.v !== 1 || !personaOrder.includes(profile.type)) {
+  if (!profile || ![1, 2].includes(profile.v)) {
     return null;
   }
 
-  const scores = Array.isArray(profile.scores)
-    ? profile.scores.slice(0, personaOrder.length).map((score) => Math.max(0, Number(score) || 0))
-    : personaOrder.map((type) => Math.max(0, Number(profile.scores?.[type]) || 0));
+  const type = profile.v === 2 ? personaOrder[Number(profile.t)] : profile.type;
+  if (!personaOrder.includes(type)) {
+    return null;
+  }
+
+  const rawScores = profile.v === 2 ? profile.s : profile.scores;
+  const rawAnswerTypes = profile.v === 2
+    ? (Array.isArray(profile.a) ? profile.a.map((index) => personaOrder[Number(index)]) : [])
+    : profile.answerTypes;
+
+  const scores = Array.isArray(rawScores)
+    ? rawScores.slice(0, personaOrder.length).map((score) => Math.max(0, Number(score) || 0))
+    : personaOrder.map((personaType) => Math.max(0, Number(rawScores?.[personaType]) || 0));
 
   if (scores.length !== personaOrder.length || scores.every((score) => score === 0)) {
     return null;
   }
 
   return {
-    v: 1,
-    type: profile.type,
+    v: profile.v,
+    type,
     scores,
-    answerTypes: Array.isArray(profile.answerTypes)
-      ? profile.answerTypes.filter((type) => personaOrder.includes(type)).slice(0, totalQuizSteps)
+    answerTypes: Array.isArray(rawAnswerTypes)
+      ? rawAnswerTypes.filter((answerType) => personaOrder.includes(answerType)).slice(0, totalQuizSteps)
       : [],
   };
 }
@@ -972,16 +1095,67 @@ function getAnswerTypeSimilarity(friendTypes) {
 }
 
 function getMatchTone(score) {
-  const copy = uiCopy[currentLang];
-  if (score >= 86) {
-    return copy.matchToneHigh;
+  const friendType = sharedMatchProfile?.type;
+  const sameType = friendType === finalPersonaType;
+  const roles = {
+    zh: {
+      weekend: "抓住出发时机",
+      food: "找到好吃的",
+      budget: "看住旅行预算",
+      luxury: "保证大家休息好",
+      culture: "把路线安排明白",
+      nature: "给行程留点惊喜",
+    },
+    en: {
+      weekend: "spot the right moment to leave",
+      food: "find the meals worth traveling for",
+      budget: "keep the budget sensible",
+      luxury: "make sure everyone rests well",
+      culture: "turn ideas into a smart route",
+      nature: "leave room for detours",
+    },
+  };
+  const roleA = roles[currentLang][friendType] || "";
+  const roleB = roles[currentLang][finalPersonaType] || "";
+  const seed = `${score}:${friendType}:${finalPersonaType}:${currentLang}`;
+  let variants;
+
+  if (currentLang === "zh") {
+    if (score >= 86) {
+      variants = sameType
+        ? ["旅行脑回路几乎同步，可以直接开始挑日期了。", "连出发节奏都很像，这趟大概率不用互相迁就。"]
+        : [`一个会${roleA}，一个会${roleB}，分工已经自然形成。`, "想去的和在意的都很合拍，可以开始认真组局了。"];
+    } else if (score >= 72) {
+      variants = sameType
+        ? ["大方向很一致，出发前把预算和作息再对齐就稳了。", "属于很好组队的类型，只差一起选个都想去的地方。"]
+        : [`一个会${roleA}，一个会${roleB}；把节奏谈好，会是很顺的组合。`, "有默契也有互补，先约定每天各自最想保住的一件事。"];
+    } else {
+      variants = sameType
+        ? ["想法相近，但旅行细节未必一样，先聊聊早起和花钱习惯。", "同类搭子也会有不同节奏，出发前最好各自说清底线。"]
+        : [`你们的强项分别是${roleA}和${roleB}，先把预算、饭点和作息说开。`, "互补感比同步感更强，规则先讲好，路上反而可能很好玩。"];
+    }
+  } else if (score >= 86) {
+    variants = sameType
+      ? ["Your travel instincts are almost in sync. Start comparing dates.", "Even your travel pace lines up — this one should feel easy."]
+      : [`One can ${roleA}; the other can ${roleB}. The roles already work.`, "Your priorities line up well enough to start planning for real."];
+  } else if (score >= 72) {
+    variants = sameType
+      ? ["The big ideas match. Align budget and sleep schedules, then go.", "Easy team energy — now pick a place you both want."]
+      : [`One can ${roleA}; the other can ${roleB}. Agree on pace and it should flow.`, "A useful mix of shared taste and different strengths."];
+  } else {
+    variants = sameType
+      ? ["Similar instincts, different details. Compare budgets and morning habits first.", "Even matching types travel differently, so name your non-negotiables."]
+      : [`Your strengths are to ${roleA} and ${roleB}. Agree on the ground rules first.`, "More complementary than synchronized — potentially fun with a little planning."];
   }
 
-  if (score >= 72) {
-    return copy.matchToneGood;
-  }
+  return getStableVariant(variants, seed);
+}
 
-  return copy.matchToneCareful;
+function getMatchResultLine(score, tone) {
+  const openings = currentLang === "zh"
+    ? [`你们的旅行搭子指数是 ${score}%。`, `这趟旅行的默契值：${score}%。`, `${score}% 的搭子默契，先看看怎么配合。`]
+    : [`Your travel-duo match is ${score}%.`, `Trip compatibility: ${score}%.`, `${score}% travel chemistry — here is how it could work.`];
+  return `${getStableVariant(openings, `${score}:${currentLang}`)}${currentLang === "zh" ? "" : " "}${tone}`;
 }
 
 function calculateFriendMatch() {
@@ -1008,10 +1182,10 @@ function calculateFriendMatch() {
 
 function buildShareProfile() {
   return {
-    v: 1,
-    type: finalPersonaType,
-    scores: getScoreArray(getScoreSummary()),
-    answerTypes: answers.map((answer) => answer.type),
+    v: 2,
+    t: personaOrder.indexOf(finalPersonaType),
+    s: getScoreArray(getScoreSummary()),
+    a: answers.map((answer) => personaOrder.indexOf(answer.type)),
   };
 }
 
@@ -1062,10 +1236,9 @@ function setStoryHero(hero) {
 }
 
 function getDestinationPhotoLibrary() {
-  return Object.values(destinationHeroImages).map((hero) => ({
-    zh: hero.destination.zh,
-    en: hero.destination.en,
-  }));
+  return Object.values(personaDestinationAlternatives)
+    .flat()
+    .map(({ destination }) => ({ zh: destination.zh, en: destination.en }));
 }
 
 function renderStaticCopy() {
@@ -1212,33 +1385,6 @@ function showResult() {
   requestPersonalizedResult();
 }
 
-const skyscannerDestinationSearch = {
-  weekend: {
-    iata: "FUK",
-    hotelUrl: "https://www.skyscanner.com/hotels/japan/fukuoka-hotels/ci-27541740",
-  },
-  food: {
-    iata: "BKK",
-    hotelUrl: "https://www.skyscanner.com/hotels/thailand/bangkok-hotels/ci-27536671",
-  },
-  budget: {
-    iata: "CNX",
-    hotelUrl: "https://www.skyscanner.com/hotels/thailand/chiang-mai-hotels/ci-27539873",
-  },
-  luxury: {
-    iata: "UKY",
-    hotelUrl: "https://www.skyscanner.com/hotels/japan/kyoto-hotels/ci-27548351",
-  },
-  culture: {
-    iata: "SEL",
-    hotelUrl: "https://www.skyscanner.com/hotels/south-korea/seoul-hotels/ci-27538638",
-  },
-  nature: {
-    iata: "OKA",
-    hotelUrl: "https://www.skyscanner.com/hotels/japan/okinawa-hotels/ci-27540768",
-  },
-};
-
 const skyscannerReferralBaseUrl = "https://www.skyscanner.net/g/referrals/v1";
 
 function getSkyscannerAngleFromUrl(url) {
@@ -1284,8 +1430,23 @@ function getSkyscannerSearchType(angle) {
 }
 
 function getSkyscannerDestinationConfig(destination) {
-  const heroType = getKnownDestinationHeroType(destination);
-  return skyscannerDestinationSearch[heroType] || null;
+  const normalizedDestination = normalizeDestinationName(destination);
+  const variant = Object.values(personaDestinationAlternatives)
+    .flat()
+    .find(({ destination: candidate }) =>
+      [candidate.zh, candidate.en].some(
+        (name) => normalizeDestinationName(name) === normalizedDestination,
+      ),
+    );
+
+  if (!variant?.search) {
+    return null;
+  }
+
+  return {
+    iata: variant.search.iata,
+    hotelUrl: `https://www.skyscanner.com/hotels/search?destination=${encodeURIComponent(variant.search.hotelQuery)}`,
+  };
 }
 
 function buildSkyscannerUrl(angle, destination) {
@@ -1318,49 +1479,74 @@ function normalizeList(value, fallback) {
 }
 
 function getLocalSkyscannerTitle(angle, destination) {
-  const personaName = getPersonaDisplayName(finalPersona);
   const searchType = getSkyscannerSearchType(angle);
-  const labels = {
-    zh: {
-      flights: `看看从你附近出发去${destination}的机票`,
-      hotels: `看看${destination}的酒店`,
-    },
-    en: {
-      flights: `see flights from near you to ${destination}`,
-      hotels: `see hotels in ${destination}`,
-    },
-  };
-  return `${personaName}: ${labels[currentLang][searchType]}`;
+  if (currentLang === "zh") {
+    return searchType === "hotels"
+      ? `下一站在${destination}，看看住哪里`
+      : `下一站在${destination}，看看怎么抵达`;
+  }
+
+  return searchType === "hotels"
+    ? `Next stop: ${destination}. See where to stay.`
+    : `Next stop: ${destination}. See how to get there.`;
 }
 
 function getLocalSkyscannerCopy(angle, destination) {
   const searchType = getSkyscannerSearchType(angle);
   const copyByAngle = {
     zh: {
-      flights: `目的地已经填好；打开后会按你的访问地区显示出发选项，日期可以再调整。`,
-      hotels: `${destination}已经填好；打开后选择入住日期，就能查看当地酒店。`,
+      flights: {
+        weekend: [`从附近出发的选项可以一起比较。先看时间合不合适，再决定这个周末要不要真的出发。`, `把航班和日期放在一起看看，也许下一次短假不用再留在收藏夹里。`],
+        food: [`去${destination}的航班可以一起比较。把交通定得简单一点，落地后专心决定第一顿。`, `先处理怎么去，至于到达后从市场还是餐厅开始，可以继续慢慢纠结。`],
+        budget: [`换几个日期，看看航班组合的差别；合适的那一个，不一定只看票面价格。`, `把时间、转机和价格放在一起比较，选一个整体更划算的方案。`],
+        nature: [`先把去${destination}的航班放在一起比较。抵达之后想租车、坐船还是慢慢走，都可以晚点再决定。`, `先选一种舒服的抵达方式。至于这趟带登山鞋还是泳衣，等订完再想也不迟。`],
+      },
+      hotels: {
+        luxury: [`不同日期和住宿可以一起比较。先找到一间让你愿意早点回去的房间。`, `看看${destination}有哪些值得赖床的住处，其他安排可以围绕它慢慢长出来。`],
+        culture: [`看看${destination}不同街区的住宿选择。住对地方，临时多看一个展也不用重新计算全城交通。`, `先选一个每天都方便出门的落脚点，把现场的时间留给真正想看的东西。`],
+      },
     },
     en: {
-      flights: `The destination is filled in. Open it to see departure options for your region, then adjust the dates.`,
-      hotels: `${destination} is filled in. Open it, choose your dates and browse local stays.`,
+      flights: {
+        weekend: [`Compare nearby departure options, check the timing and see whether this weekend could actually happen.`, `Put flights and dates side by side. The next short break may not need to stay in your saved list.`],
+        food: [`Compare flights to ${destination}. Keep the transport simple and save the hard decision for your first meal.`, `Sort out how to get there first; market or restaurant can remain the fun dilemma.`],
+        budget: [`Try a few dates and compare the whole flight combination — the lowest headline price is not always the best fit.`, `Compare time, connections and price together, then choose the option with better overall value.`],
+        nature: [`Compare flights to ${destination}. Car, ferry or a long walk can wait until after you know how you are arriving.`, `Choose a comfortable way to arrive. Decide between hiking shoes and swimwear after booking.`],
+      },
+      hotels: {
+        luxury: [`Compare dates and stays, then find a room worth coming back to early.`, `See which ${destination} stays make sleeping in feel like part of the trip.`],
+        culture: [`Compare stays across ${destination}. The right neighborhood makes one more exhibition much easier to add.`, `Choose a base that is easy to leave each morning, then save your time for what you came to see.`],
+      },
     },
   };
-  return copyByAngle[currentLang][searchType];
+  const variants = copyByAngle[currentLang][searchType][finalPersonaType] || [
+    currentLang === "zh"
+      ? `先看看${destination}的旅行选择，日期和细节都可以之后再调整。`
+      : `Explore options for ${destination}; dates and details can stay flexible for now.`,
+  ];
+  return getStableVariant(variants, `${destination}:${currentLang}:copy`);
 }
 
 function getLocalSkyscannerServices(angle) {
-  const searchType = getSkyscannerSearchType(angle);
   const services = {
     zh: {
-      flights: ["附近出发", "目的地已填", "日期可选"],
-      hotels: ["目的地已填", "酒店", "日期可选"],
+      weekend: ["周末出发", "航班比较", "日期灵活"],
+      food: ["飞去开吃", "航班比较", "日期灵活"],
+      budget: ["聪明比价", "灵活日期", "总价意识"],
+      luxury: ["住得舒服", "酒店比较", "慢慢选日期"],
+      culture: ["选对街区", "酒店位置", "路线友好"],
+      nature: ["航班比较", "抵达方式", "行程自定"],
     },
     en: {
-      flights: ["Nearby origin", "Destination set", "Flexible dates"],
-      hotels: ["Destination set", "Hotels", "Choose dates"],
+      weekend: ["Weekend escape", "Compare flights", "Flexible dates"],
+      food: ["Fly for food", "Compare flights", "Flexible dates"],
+      budget: ["Compare smarter", "Flexible dates", "Total trip value"],
+      luxury: ["Stay well", "Compare hotels", "Choose dates"],
+      culture: ["Right neighborhood", "Hotel location", "Route friendly"],
+      nature: ["Compare flights", "Ways to arrive", "Plan it your way"],
     },
   };
-  return services[currentLang][searchType];
+  return services[currentLang][finalPersonaType];
 }
 
 function getResultContent() {
@@ -1403,8 +1589,8 @@ function getResultContent() {
     note: aiPersonalizedResult.resultNote || fallbackNote,
     tags: normalizeList(aiPersonalizedResult.tags, fallbackTags),
     skyscannerUrl: buildSkyscannerUrl(aiAngle, aiDestination),
-    skyscannerTitle: aiPersonalizedResult.skyscannerTitle || localize(finalPersona.skyscanner.title),
-    skyscannerCopy: aiPersonalizedResult.skyscannerCopy || localize(finalPersona.skyscanner.copy),
+    skyscannerTitle: getLocalSkyscannerTitle(aiAngle, aiDestination),
+    skyscannerCopy: getLocalSkyscannerCopy(aiAngle, aiDestination),
     skyscannerServices: aiServices,
     shareCaption: aiPersonalizedResult.shareCaption || "",
   };
@@ -1415,7 +1601,7 @@ function renderResult() {
   const result = getResultContent();
   latestFriendMatch = calculateFriendMatch();
   const resultLede = latestFriendMatch
-    ? copy.matchResultLine(latestFriendMatch.score, latestFriendMatch.tone)
+    ? getMatchResultLine(latestFriendMatch.score, latestFriendMatch.tone)
     : aiPersonalizedResult?.shareCaption || localize(finalPersona.vibe);
 
   progressFill.style.width = "100%";
@@ -1442,6 +1628,10 @@ function renderResult() {
   resultEls.note.textContent = result.note;
   resultEls.score.textContent = latestFriendMatch ? `${latestFriendMatch.score}%` : copy.friendStampReady;
   resultEls.scoreLabel.textContent = latestFriendMatch ? copy.friendStampMatchedLabel : copy.friendStampReadyLabel;
+  resultEls.scoreLink.href = getMatchShareUrl();
+  resultEls.scoreLink.setAttribute("aria-label", copy.friendStampLinkLabel);
+  resultEls.scoreLink.setAttribute("title", copy.friendStampLinkLabel);
+  resultEls.scoreLink.setAttribute("aria-disabled", "false");
   resultEls.tags.innerHTML = result.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
   resultEls.skyscannerLink.href = result.skyscannerUrl;
   resultEls.skyscannerTitle.textContent = result.skyscannerTitle;
@@ -1474,6 +1664,9 @@ function renderDefaultResult() {
   resultEls.note.textContent = copy.defaultNote;
   resultEls.score.textContent = copy.friendStampLocked;
   resultEls.scoreLabel.textContent = sharedMatchProfile ? copy.matchPendingLabel : copy.friendStampLockedLabel;
+  resultEls.scoreLink.removeAttribute("href");
+  resultEls.scoreLink.removeAttribute("title");
+  resultEls.scoreLink.setAttribute("aria-disabled", "true");
   resultEls.tags.innerHTML = copy.defaultTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
   resultEls.skyscannerLink.href = "https://www.skyscanner.com/";
   resultEls.skyscannerTitle.textContent = copy.defaultSkyscannerTitle;
@@ -1498,6 +1691,11 @@ function restartQuiz() {
 }
 
 function buildAiPayload() {
+  const selectedVariant = finalDestinationVariant || {
+    destination: finalPersona.destination,
+    note: finalPersona.note,
+  };
+
   return {
     language: currentLang,
     persona: {
@@ -1505,8 +1703,8 @@ function buildAiPayload() {
       name: finalPersona.name,
       displayName: getPersonaDisplayName(finalPersona),
       label: localize(finalPersona.label),
-      destination: localize(finalPersona.destination),
-      note: localize(finalPersona.note),
+      destination: localize(selectedVariant.destination),
+      note: localize(selectedVariant.note),
       tags: finalPersona.tags[currentLang],
       skyscannerTitle: localize(finalPersona.skyscanner.title),
       skyscannerCopy: localize(finalPersona.skyscanner.copy),
@@ -1711,7 +1909,10 @@ function getShareText() {
   }
 
   const shareUrl = getMatchShareUrl();
-  return `${copy.shareInvite}\n${shareUrl}`;
+  // Keep invitations deliberately neutral: never include either person's persona,
+  // destination, answers or match score in the share copy.
+  const invitation = getRandomItem(copy.shareInviteVariants);
+  return `${invitation}\n${shareUrl}`;
 }
 
 async function copyShareText() {
@@ -1765,74 +1966,108 @@ async function createResultCardBlob() {
 
   const background = ctx.createLinearGradient(0, 0, 0, height);
   background.addColorStop(0, "#05203c");
-  background.addColorStop(0.34, "#05203c");
-  background.addColorStop(0.341, "#eef6fd");
+  background.addColorStop(0.31, "#05203c");
+  background.addColorStop(0.311, "#eaf4fd");
   background.addColorStop(1, "#f8fbff");
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, width, height);
 
+  ctx.save();
+  ctx.shadowColor = "rgba(5, 32, 60, 0.14)";
+  ctx.shadowBlur = 34;
+  ctx.shadowOffsetY = 18;
   ctx.fillStyle = "#ffffff";
-  roundRect(ctx, 92, 142, 896, 1186, 34);
+  roundRect(ctx, 84, 106, 912, 1240, 40);
   ctx.fill();
+  ctx.restore();
 
   ctx.fillStyle = "#005eb8";
-  roundRect(ctx, 92, 142, 896, 14, 7);
+  roundRect(ctx, 84, 106, 912, 14, 7);
   ctx.fill();
 
+  ctx.font = "900 32px system-ui, sans-serif";
+  const servicePillWidth = Math.min(410, Math.max(304, ctx.measureText(copy.posterServices).width + 72));
   ctx.fillStyle = "#e8f4ff";
-  roundRect(ctx, 150, 208, 338, 74, 37);
+  roundRect(ctx, 142, 166, servicePillWidth, 72, 36);
   ctx.fill();
 
   try {
     const avatar = await loadImage(finalPersona.image);
     ctx.save();
-    roundRect(ctx, 672, 196, 230, 230, 42);
+    ctx.shadowColor = "rgba(5, 32, 60, 0.16)";
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "#dff8f4";
+    roundRect(ctx, 706, 156, 220, 220, 44);
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    roundRect(ctx, 706, 156, 220, 220, 44);
     ctx.clip();
-    ctx.drawImage(avatar, 672, 196, 230, 230);
+    ctx.drawImage(avatar, 706, 156, 220, 220);
     ctx.restore();
   } catch {
     // If the image cannot be loaded, keep the poster text-only.
   }
 
   ctx.fillStyle = "#004f9f";
-  ctx.font = "900 34px system-ui, sans-serif";
-  ctx.fillText(copy.posterServices, 186, 256);
+  ctx.font = "900 32px system-ui, sans-serif";
+  ctx.fillText(copy.posterServices, 178, 213);
 
   ctx.fillStyle = "#05203c";
-  ctx.font = "900 54px system-ui, sans-serif";
-  ctx.fillText(copy.posterKicker, 150, 374);
+  ctx.font = "850 44px system-ui, sans-serif";
+  ctx.fillText(copy.posterKicker, 142, 338);
 
   ctx.fillStyle = "#005eb8";
-  ctx.font = "900 102px system-ui, sans-serif";
-  wrapCanvasText(ctx, result.name, 150, 526, 760, 112);
+  ctx.font = `${currentLang === "zh" ? "900 92px" : "900 82px"} system-ui, sans-serif`;
+  wrapCanvasText(ctx, result.name, 142, 446, 790, currentLang === "zh" ? 102 : 92, 2);
 
   ctx.fillStyle = "#05203c";
-  ctx.font = "800 44px system-ui, sans-serif";
-  wrapCanvasText(ctx, result.label, 150, 666, 760, 56);
+  ctx.font = `${currentLang === "zh" ? "750 36px" : "750 34px"} system-ui, sans-serif`;
+  wrapCanvasText(ctx, result.label, 142, 584, 790, 48, 2);
 
-  ctx.fillStyle = "#005f59";
-  ctx.font = "900 42px system-ui, sans-serif";
-  ctx.fillText(copy.posterDestination, 150, 800);
+  ctx.strokeStyle = "rgba(0, 94, 184, 0.13)";
+  ctx.lineWidth = 2;
+  ctx.fillStyle = "#f2f8fe";
+  roundRect(ctx, 126, 682, 828, 354, 30);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#006f67";
+  ctx.font = "900 31px system-ui, sans-serif";
+  ctx.fillText(copy.posterDestination, 166, 742);
 
   ctx.fillStyle = "#05203c";
-  ctx.font = "900 88px system-ui, sans-serif";
-  ctx.fillText(result.destination, 150, 910);
+  ctx.font = `${currentLang === "zh" ? "900 72px" : "900 66px"} system-ui, sans-serif`;
+  wrapCanvasText(ctx, result.destination, 166, 826, 748, 76, 1);
 
   ctx.fillStyle = "#2f435a";
-  ctx.font = "500 38px system-ui, sans-serif";
-  wrapCanvasText(ctx, result.note, 150, 1010, 780, 54);
+  ctx.font = `${currentLang === "zh" ? "600 31px" : "600 29px"} system-ui, sans-serif`;
+  wrapCanvasText(ctx, result.note, 166, 902, 748, 45, 3);
 
   ctx.fillStyle = "#004f9f";
-  ctx.font = "900 34px system-ui, sans-serif";
-  wrapCanvasText(ctx, copy.posterReaction, 150, 1184, 780, 46);
+  ctx.font = "900 31px system-ui, sans-serif";
+  wrapCanvasText(ctx, copy.posterReaction, 142, 1108, 520, 42, 1);
 
-  ctx.fillStyle = "#05203c";
-  ctx.font = "800 32px system-ui, sans-serif";
-  wrapCanvasText(ctx, result.tags.map((tag) => `#${tag}`).join("  "), 150, 1270, 780, 42);
+  ctx.font = `${currentLang === "zh" ? "850 27px" : "850 25px"} system-ui, sans-serif`;
+  drawCanvasChips(ctx, result.tags, 142, 1152, 520, 50, 12);
+
+  drawCanvasQrCode(ctx, getMatchShareUrl(), 718, 1056, 216);
+  ctx.fillStyle = "#2f435a";
+  ctx.font = `${currentLang === "zh" ? "800 24px" : "800 22px"} system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(copy.posterQrLabel, 826, 1292);
+  ctx.textAlign = "start";
+
+  ctx.strokeStyle = "rgba(5, 32, 60, 0.12)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(142, 1304);
+  ctx.lineTo(938, 1304);
+  ctx.stroke();
 
   ctx.fillStyle = "#2f435a";
-  ctx.font = "700 28px system-ui, sans-serif";
-  ctx.fillText(copy.posterBrand, 150, 1320);
+  ctx.font = "700 25px system-ui, sans-serif";
+  ctx.fillText(copy.posterBrand, 142, 1334);
 
   return canvasToBlob(canvas);
 }
@@ -1856,7 +2091,7 @@ async function downloadResultCard() {
       const shareData = {
         files: [file],
         title: copy.posterKicker,
-        text: copy.shareInvite,
+        text: getShareText(),
       };
 
       if (navigator.canShare(shareData)) {
@@ -1899,27 +2134,107 @@ function loadImage(src) {
   });
 }
 
-function wrapCanvasText(ctx, textToWrap, x, y, maxWidth, lineHeight) {
+function getCanvasTextLines(ctx, textToWrap, maxWidth) {
   const hasSpaces = textToWrap.includes(" ");
   const tokens = hasSpaces ? textToWrap.split(" ") : Array.from(textToWrap);
   const joiner = hasSpaces ? " " : "";
+  const lines = [];
   let line = "";
-  let currentY = y;
 
   tokens.forEach((token) => {
     const testLine = line ? `${line}${joiner}${token}` : token;
     if (ctx.measureText(testLine).width > maxWidth && line) {
-      ctx.fillText(line, x, currentY);
+      lines.push(line);
       line = token;
-      currentY += lineHeight;
     } else {
       line = testLine;
     }
   });
 
   if (line) {
-    ctx.fillText(line, x, currentY);
+    lines.push(line);
   }
+
+  return lines;
+}
+
+function wrapCanvasText(ctx, textToWrap, x, y, maxWidth, lineHeight, maxLines = Infinity) {
+  const lines = getCanvasTextLines(ctx, String(textToWrap), maxWidth);
+  const visibleLines = lines.slice(0, maxLines);
+
+  if (lines.length > maxLines && visibleLines.length) {
+    let lastLine = visibleLines[visibleLines.length - 1];
+    while (lastLine && ctx.measureText(`${lastLine}…`).width > maxWidth) {
+      lastLine = lastLine.slice(0, -1).trimEnd();
+    }
+    visibleLines[visibleLines.length - 1] = `${lastLine}…`;
+  }
+
+  visibleLines.forEach((line, index) => {
+    ctx.fillText(line, x, y + index * lineHeight);
+  });
+
+  return y + visibleLines.length * lineHeight;
+}
+
+function drawCanvasChips(ctx, tags, startX, startY, maxWidth, height, gap) {
+  let x = startX;
+  let y = startY;
+
+  tags.slice(0, 3).forEach((tag) => {
+    const label = `#${tag}`;
+    const width = Math.ceil(ctx.measureText(label).width) + 36;
+    if (x > startX && x + width > startX + maxWidth) {
+      x = startX;
+      y += height + gap;
+    }
+
+    ctx.fillStyle = "#e8f4ff";
+    roundRect(ctx, x, y, width, height, height / 2);
+    ctx.fill();
+    ctx.fillStyle = "#05203c";
+    ctx.fillText(label, x + 18, y + 34);
+    x += width + gap;
+  });
+
+  return y + height;
+}
+
+function drawCanvasQrCode(ctx, value, x, y, size) {
+  if (typeof qrcode !== "function") {
+    return false;
+  }
+
+  const code = qrcode(0, "M");
+  code.addData(value);
+  code.make();
+
+  const moduleCount = code.getModuleCount();
+  const quietZone = 4;
+  const cellSize = Math.max(1, Math.floor(size / (moduleCount + quietZone * 2)));
+  const qrSize = cellSize * (moduleCount + quietZone * 2);
+  const offsetX = x + Math.floor((size - qrSize) / 2);
+  const offsetY = y + Math.floor((size - qrSize) / 2);
+
+  ctx.fillStyle = "#ffffff";
+  roundRect(ctx, x - 8, y - 8, size + 16, size + 16, 18);
+  ctx.fill();
+
+  ctx.fillStyle = "#05203c";
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let column = 0; column < moduleCount; column += 1) {
+      if (code.isDark(row, column)) {
+        ctx.fillRect(
+          offsetX + (column + quietZone) * cellSize,
+          offsetY + (row + quietZone) * cellSize,
+          cellSize,
+          cellSize,
+        );
+      }
+    }
+  }
+
+  return true;
 }
 
 backButton.addEventListener("click", () => {

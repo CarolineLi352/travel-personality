@@ -33,11 +33,23 @@ DEFAULT_PORTKEY_PROVIDER = "@bedrock-sandbox"
 DEFAULT_AI_PROVIDER = "anthropic"
 DESTINATION_PHOTO_LIBRARY = [
     {"zh": "福冈", "en": "Fukuoka"},
+    {"zh": "台北", "en": "Taipei"},
+    {"zh": "新加坡", "en": "Singapore"},
     {"zh": "曼谷", "en": "Bangkok"},
+    {"zh": "墨西哥城", "en": "Mexico City"},
+    {"zh": "博洛尼亚", "en": "Bologna"},
     {"zh": "清迈", "en": "Chiang Mai"},
+    {"zh": "河内", "en": "Hanoi"},
+    {"zh": "第比利斯", "en": "Tbilisi"},
     {"zh": "京都", "en": "Kyoto"},
+    {"zh": "巴厘岛", "en": "Bali"},
+    {"zh": "马拉喀什", "en": "Marrakech"},
     {"zh": "首尔", "en": "Seoul"},
+    {"zh": "巴黎", "en": "Paris"},
+    {"zh": "伊斯坦布尔", "en": "Istanbul"},
     {"zh": "冲绳", "en": "Okinawa"},
+    {"zh": "皇后镇", "en": "Queenstown"},
+    {"zh": "雷克雅未克", "en": "Reykjavik"},
 ]
 
 

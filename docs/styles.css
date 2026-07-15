@@ -635,8 +635,31 @@ h1 {
   border-radius: 50%;
   background: var(--brand-blue-dark);
   color: var(--paper);
+  text-decoration: none;
   transform: rotate(-8deg);
   box-shadow: 0 12px 26px rgba(5, 32, 60, 0.24);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.score-stamp[href] {
+  cursor: pointer;
+}
+
+.score-stamp[href]:hover {
+  transform: rotate(-5deg) translateY(-3px);
+  box-shadow: 0 16px 30px rgba(5, 32, 60, 0.3);
+}
+
+.score-stamp[href]:focus-visible {
+  outline: 4px solid color-mix(in srgb, var(--brand-blue) 36%, white);
+  outline-offset: 4px;
+}
+
+.score-stamp[aria-disabled="true"] {
+  cursor: default;
 }
 
 .score-stamp span {
