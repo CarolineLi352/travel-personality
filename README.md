@@ -1,20 +1,20 @@
 # Travel Personality
 
-这个仓库包含两个彼此独立的旅行人格测试。原版侧重完整的目的地匹配与好友玩法；V2 是为 Hackathon 设计的娱乐化版本，使用 16 道互联网行为题、9 种人格代码和本地多方案趣味总结生成器。
+这是 Travel Personality 原版仓库，侧重目的地匹配、双语体验与好友玩法。为 Hackathon 设计的 V2 已迁移到独立仓库并单独部署。
 
 ## 版本导航
 
 | | 原版 | V2 Hackathon 版 |
 | --- | --- | --- |
-| 位置 | 仓库根目录 | [`v2/`](v2/) |
+| 代码 | 当前仓库 | [travel-personality-v2](https://github.com/CarolineLi352/travel-personality-v2) |
 | 技术 | HTML / CSS / JavaScript | Next.js / React / TypeScript |
 | 问卷 | 7 道动态分支题 | 16 道互联网行为题 |
 | 结果 | 6 种人格、18 个目的地 | 9 种人格代码、8 个虚构世界、24 个现实目的地 |
 | 分享 | 好友匹配、海报二维码 | 固定尺寸人格海报与二维码、结果链接、邀请链接 |
 | 运行方式 | 静态服务器 | 独立 Next.js 应用 |
-| 文档 | 本 README | [V2 README](v2/README.md) · [产品说明](v2/docs/PRODUCT.md) · [技术说明](v2/docs/ARCHITECTURE.md) |
+| 在线体验 | [V1](https://carolineli352.github.io/travel-personality/) | [V2](https://carolineli352.github.io/travel-personality-v2/) |
 
-两版拥有独立的依赖、启动命令和自动化测试。V2 不会覆盖原版页面、测试或 GitHub Pages 发布目录。
+两版拥有独立的仓库、依赖、自动化测试和 GitHub Pages 地址。
 
 ## 快速开始
 
@@ -30,23 +30,16 @@ python3 -m http.server 5173
 
 ### V2 Hackathon 版
 
-需要 Node.js 20 或更高版本：
+V2 已迁移到独立仓库，需要 Node.js 20 或更高版本：
 
 ```bash
-cd v2
+git clone git@github.com:CarolineLi352/travel-personality-v2.git
+cd travel-personality-v2
 npm ci
 npm run dev
 ```
 
-访问 `http://localhost:3000`。V2 的计分、人格匹配和吐槽文案均在浏览器本地生成，不需要 API Key 或分析后端。
-
-也可以在仓库根目录运行：
-
-```bash
-npm run dev:v2
-npm run build:v2
-npm run test:v2
-```
+访问 `http://localhost:3000`。V2 不需要 API Key 或分析后端。
 
 ## 原版功能
 
@@ -82,8 +75,7 @@ npm run test:v2
 ├── tests/                  # 原版 Playwright 测试
 ├── scripts/build-docs.sh   # 原版发布目录生成脚本
 ├── docs/                   # 原版 GitHub Pages 发布目录，不是项目文档目录
-├── .github/workflows/      # 两版 CI
-└── v2/                     # 独立的 Next.js Hackathon 版本
+└── .github/workflows/      # 原版 CI
 ```
 
 ## 测试
@@ -92,18 +84,16 @@ npm run test:v2
 
 ```bash
 npm ci
-npm ci --prefix v2
 npx playwright install chromium
 ```
 
-分别运行：
+运行测试：
 
 ```bash
-npm test          # 原版浏览器测试
-npm run test:v2   # V2 浏览器测试
+npm test
 ```
 
-原版测试覆盖 6 种人格、18 个目的地、双语切换、好友匹配链接和海报二维码；V2 测试覆盖完整 16 题流程、9 种人格、24 个目的地、雷达图、结果 Hash、分享入口、海报二维码、无性别文案和纯静态架构。
+测试覆盖 6 种人格、18 个目的地、双语切换、好友匹配链接和海报二维码。V2 的完整测试保留在其独立仓库。
 
 ## 原版发布
 
@@ -115,7 +105,7 @@ npm run test:v2   # V2 浏览器测试
 
 脚本会把页面、favicon、`assets/` 和 `vendor/` 同步到 `docs/`。当前 GitHub Pages 使用 `main` 分支的 `/docs` 目录发布。
 
-V2 的部署方式见 [v2/README.md](v2/README.md#部署到-vercel)。
+V2 使用独立 GitHub Actions 部署，详见 [V2 README](https://github.com/CarolineLi352/travel-personality-v2#部署到-github-pages)。
 
 ## 隐私与依赖
 

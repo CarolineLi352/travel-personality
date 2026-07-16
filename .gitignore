@@ -2,9 +2,5 @@
 tmp/
 node_modules/
 dist/
-.next/
-.env
-.env.local
-*.tsbuildinfo
 playwright-report/
 test-results/
