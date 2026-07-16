@@ -6,7 +6,10 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "dev:v2": "npm --prefix v2 run dev",
+    "build:v2": "npm --prefix v2 run build",
+    "test:v2": "npm --prefix v2 test"
   },
   "engines": {
     "node": ">=20"

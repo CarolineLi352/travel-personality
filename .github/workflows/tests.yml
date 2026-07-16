@@ -10,7 +10,7 @@ permissions:
 jobs:
   browser-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -29,6 +29,18 @@ jobs:
 
       - name: Run browser tests
         run: npm test
+
+      - name: Install AI Hackathon version dependencies
+        run: npm ci --prefix v2
+
+      - name: Install AI Hackathon version Chromium
+        run: cd v2 && npx playwright install --with-deps chromium
+
+      - name: Run AI Hackathon version checks
+        run: |
+          npm --prefix v2 run typecheck
+          npm --prefix v2 run build
+          npm --prefix v2 test
 
       - name: Upload Playwright report
         if: always()
